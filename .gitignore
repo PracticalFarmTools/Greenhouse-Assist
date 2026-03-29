@@ -1,0 +1,10 @@
+# Ignore everything
+*
+
+# Except the Greenhouse Assist project files
+!.gitignore
+!README.md
+!Greenhouse Assist.js
+!greenhouse-assist.html
+!greenhouse-command.html
+!index.html

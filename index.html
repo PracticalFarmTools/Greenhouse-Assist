@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Greenhouse Assist — Spear Farm Command Center</title>
+    <meta name="description"
+        content="Sensor-less greenhouse thermodynamic and biology engine for Spear Farm, Nobleboro ME. Zone 5b.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════════════════
+           Greenhouse Assist — Standalone Embedded Styles
+           Dark agricultural theme, high-visibility for outdoor/field use.
+           ═══════════════════════════════════════════════════════════════════ */
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --soil:       #0f1108;
+            --soil-mid:   #1a1e12;
+            --soil-light: #252b1a;
+            --leaf:       #4a7c2e;
+            --leaf-light: #6aad3d;
+            --leaf-glow:  #8fd95f;
+            --bark:       #8b6914;
+            --bark-light: #c9981a;
+            --sun:        #f5c842;
+            --sun-pale:   #fde68a;
+            --water:      #2e8bc0;
+            --water-light:#5bbdd9;
+            --danger:     #d94040;
+            --danger-soft:#ff6b6b;
+            --warn:       #e6a817;
+            --safe:       #38b764;
+            --text:       #e8e4d9;
+            --text-dim:   #9a9580;
+            --text-faint: #5c5946;
+            --glass:      rgba(255,255,255,0.04);
+            --glass-border: rgba(255,255,255,0.08);
+            --radius:     12px;
+            --radius-sm:  8px;
+            --shadow:     0 4px 24px rgba(0,0,0,0.5);
+            --vpd-wet:    #3b82f6;
+            --vpd-ideal:  #22c55e;
+            --vpd-stress: #eab308;
+            --vpd-dry:    #ef4444;
+        }
+
+        html { font-size: 16px; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--soil);
+            color: var(--text);
+            min-height: 100dvh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--soil-mid) 0%, var(--soil) 100%);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 1.25rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        header h1 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(90deg, var(--leaf-glow), var(--sun));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.15rem; }
+
+        main {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* ── Weather banner ── */
+        .weather-banner {
+            background: linear-gradient(135deg, rgba(46,139,192,0.15), rgba(74,124,46,0.1));
+            border: 1px solid rgba(46,139,192,0.25);
+            border-radius: var(--radius);
+            padding: 0.85rem 1rem;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            text-align: center;
+            transition: opacity 0.3s;
+        }
+        .weather-banner[aria-busy="true"] { opacity: 0.5; }
+        .wx-item { display: flex; flex-direction: column; gap: 0.15rem; }
+        .wx-val { font-size: 1.15rem; font-weight: 700; color: var(--water-light); }
+        .wx-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--soil-mid);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: border-color 0.2s;
+        }
+        .card:focus-within { border-color: var(--leaf); }
+        .card > summary {
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            cursor: pointer;
+            user-select: none;
+            list-style: none;
+        }
+        .card > summary::-webkit-details-marker { display: none; }
+        .card-icon { font-size: 1.4rem; flex-shrink: 0; }
+        .card-title { font-size: 0.95rem; font-weight: 700; flex: 1; }
+        .card-chevron { font-size: 0.85rem; color: var(--text-dim); transition: transform 0.25s; }
+        details[open] > summary .card-chevron { transform: rotate(90deg); }
+        .card-body { padding: 0 1rem 1rem; }
+
+        /* ── Crop chips ── */
+        .crop-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+        .crop-chip {
+            background: var(--soil-light);
+            border: 2px solid var(--glass-border);
+            border-radius: 100px;
+            padding: 0.45rem 0.85rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-family: inherit;
+        }
+        .crop-chip:hover { border-color: var(--leaf); background: rgba(74,124,46,0.12); }
+        .crop-chip[aria-pressed="true"] {
+            border-color: var(--leaf-light);
+            background: rgba(106,173,61,0.18);
+            color: var(--leaf-glow);
+            box-shadow: 0 0 12px rgba(106,173,61,0.2);
+        }
+
+        /* ── Deadband meter ── */
+        .deadband-visual {
+            background: var(--soil);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            margin-top: 0.75rem;
+        }
+        .deadband-bar {
+            height: 28px;
+            background: linear-gradient(90deg, var(--water), var(--safe) 30%, var(--safe) 70%, var(--danger) 100%);
+            border-radius: 14px;
+            position: relative;
+            margin: 0.5rem 0;
+            overflow: hidden;
+        }
+        .deadband-range {
+            position: absolute;
+            top: 2px; bottom: 2px;
+            background: rgba(56,183,100,0.45);
+            border: 2px solid var(--safe);
+            border-radius: 12px;
+            transition: left 0.4s, width 0.4s;
+        }
+        .deadband-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); }
+
+        /* ── Alerts ── */
+        .alert {
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 0.85rem;
+            font-size: 0.8rem;
+            line-height: 1.45;
+            margin-top: 0.5rem;
+        }
+        .alert-warn { background: rgba(230,168,23,0.1); border: 1px solid rgba(230,168,23,0.3); color: var(--sun-pale); }
+        .alert-danger { background: rgba(217,64,64,0.1); border: 1px solid rgba(217,64,64,0.3); color: var(--danger-soft); }
+        .alert-safe { background: rgba(56,183,100,0.1); border: 1px solid rgba(56,183,100,0.3); color: var(--safe); }
+        .alert-info { background: rgba(46,139,192,0.1); border: 1px solid rgba(46,139,192,0.3); color: var(--water-light); }
+
+        /* ── Growth stage ── */
+        .stage-input { display: flex; gap: 0.5rem; align-items: flex-end; margin-bottom: 1rem; }
+        .stage-input label, .vpd-inputs label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+        }
+        input[type="date"], input[type="number"], select {
+            background: var(--soil);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 0.55rem 0.75rem;
+            color: var(--text);
+            font-size: 0.88rem;
+            font-family: inherit;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--leaf-light); }
+
+        .stage-timeline { display: flex; gap: 2px; margin: 0.75rem 0; }
+        .stage-segment {
+            flex: 1; height: 6px; border-radius: 3px;
+            background: var(--soil-light); transition: background 0.3s;
+        }
+        .stage-segment.active { background: var(--leaf-light); }
+        .stage-segment.past { background: var(--leaf); opacity: 0.5; }
+
+        .stage-result { background: var(--soil); border-radius: var(--radius-sm); padding: 0.85rem; }
+        .stage-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .stage-dap { font-size: 0.78rem; color: var(--text-dim); }
+        .stage-transpiration {
+            font-size: 0.82rem; margin-top: 0.5rem; padding-top: 0.5rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* ── VPD Gauge ── */
+        .vpd-gauge { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
+        .vpd-value { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; transition: color 0.3s; }
+        .vpd-unit { font-size: 0.9rem; color: var(--text-dim); font-weight: 500; }
+        .vpd-zone-badge {
+            font-size: 0.82rem; font-weight: 600; padding: 0.3rem 0.75rem;
+            border-radius: 100px; transition: all 0.3s;
+        }
+        .vpd-bar {
+            width: 100%; height: 10px; border-radius: 5px;
+            background: linear-gradient(90deg, var(--vpd-wet) 0%, var(--vpd-ideal) 25%, var(--vpd-ideal) 50%, var(--vpd-stress) 70%, var(--vpd-dry) 100%);
+            position: relative; margin: 0.5rem 0;
+        }
+        .vpd-needle {
+            position: absolute; top: -4px; width: 4px; height: 18px;
+            background: white; border-radius: 2px;
+            box-shadow: 0 0 8px rgba(255,255,255,0.6);
+            transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .vpd-bar-labels { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-faint); }
+        .vpd-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+
+        /* ── Wind Dynamics ── */
+        .wind-compass {
+            width: 160px; height: 160px; border-radius: 50%;
+            border: 2px solid var(--glass-border);
+            background: radial-gradient(circle, var(--soil-light), var(--soil));
+            margin: 0.75rem auto; position: relative;
+        }
+        .compass-label { position: absolute; font-size: 0.7rem; font-weight: 700; color: var(--text-dim); }
+        .compass-label.n { top: 6px; left: 50%; transform: translateX(-50%); }
+        .compass-label.s { bottom: 6px; left: 50%; transform: translateX(-50%); }
+        .compass-label.e { right: 10px; top: 50%; transform: translateY(-50%); }
+        .compass-label.w { left: 10px; top: 50%; transform: translateY(-50%); }
+
+        .wind-arrow {
+            position: absolute; top: 50%; left: 50%;
+            width: 4px; height: 55px;
+            background: linear-gradient(to top, transparent, var(--water-light));
+            border-radius: 2px;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .wind-arrow::after {
+            content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+            border-left: 6px solid transparent; border-right: 6px solid transparent;
+            border-bottom: 10px solid var(--water-light);
+        }
+        .wind-greenhouse {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 36px; height: 24px;
+            border: 2px solid var(--bark-light); border-radius: 4px 4px 0 0;
+            background: rgba(201,152,26,0.1);
+        }
+        .wind-greenhouse.ew { width: 24px; height: 36px; }
+        .wind-orient-toggle { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+        .orient-btn {
+            background: var(--soil); border: 2px solid var(--glass-border);
+            border-radius: var(--radius-sm); padding: 0.4rem 1rem;
+            color: var(--text-dim); font-size: 0.8rem; font-weight: 700;
+            font-family: inherit; cursor: pointer; transition: all 0.2s;
+        }
+        .orient-btn[aria-pressed="true"] {
+            border-color: var(--bark-light);
+            background: rgba(201,152,26,0.12);
+            color: var(--bark-light);
+        }
+        .wind-instructions { list-style: none; display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.75rem; }
+        .wind-instructions li {
+            font-size: 0.8rem; padding: 0.4rem 0.6rem;
+            background: var(--soil); border-radius: var(--radius-sm);
+            border-left: 3px solid var(--glass-border);
+        }
+        .wind-instructions li.safe { border-left-color: var(--safe); }
+        .wind-instructions li.warn { border-left-color: var(--warn); }
+        .wind-instructions li.danger { border-left-color: var(--danger); }
+
+        /* ── Tables ── */
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th, td { padding: 0.5rem 0.65rem; text-align: left; border-bottom: 1px solid var(--glass-border); }
+        th { color: var(--text-dim); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+
+        footer {
+            text-align: center; padding: 2rem 1rem; font-size: 0.7rem; color: var(--text-faint);
+        }
+        footer a { color: var(--leaf); text-decoration: none; }
+
+        .hidden { display: none !important; }
+        .mono { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 0.85em; }
+        .section-label {
+            font-size: 0.75rem; color: var(--text-dim); font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.03em;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out both; }
+
+        @media (max-width: 420px) {
+            .weather-banner { grid-template-columns: repeat(2, 1fr); }
+            .vpd-inputs { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>🌿 Greenhouse Assist</h1>
+        <p>Spear Farm · Nobleboro ME · Zone 5b · <span id="header-time"></span></p>
+    </header>
+
+    <main>
+        <!-- Weather Banner -->
+        <section class="weather-banner" id="weather-banner" aria-busy="true" aria-label="Current weather conditions">
+            <div class="wx-item">
+                <span class="wx-val" id="wx-temp">--</span>
+                <span class="wx-label">Temp °F</span>
+            </div>
+            <div class="wx-item">
+                <span class="wx-val" id="wx-rh">--</span>
+                <span class="wx-label">Humidity %</span>
+            </div>
+            <div class="wx-item">
+                <span class="wx-val" id="wx-wind">--</span>
+                <span class="wx-label">Wind mph</span>
+            </div>
+            <div class="wx-item">
+                <span class="wx-val" id="wx-wind-dir">--</span>
+                <span class="wx-label">Wind From</span>
+            </div>
+        </section>
+
+        <!-- Card 1: Crop Selector & Deadband -->
+        <details class="card" open id="card-crops">
+            <summary>
+                <span class="card-icon">🌾</span>
+                <span class="card-title">Crop Selector & Deadband</span>
+                <span class="card-chevron">▶</span>
+            </summary>
+            <div class="card-body">
+                <p style="font-size:0.78rem; color:var(--text-dim); margin-bottom:0.75rem;">
+                    Select the crops in your greenhouse. The engine calculates the safest overlapping temperature zone.
+                </p>
+                <div class="crop-chips" id="crop-chips" role="group" aria-label="Crop selection"></div>
+                <div id="deadband-result" class="hidden">
+                    <div class="deadband-visual">
+                        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                            <span class="section-label">Safe Deadband</span>
+                            <span id="deadband-range-text" class="mono" style="font-size:0.9rem; font-weight:700; color:var(--safe);"></span>
+                        </div>
+                        <div class="deadband-bar">
+                            <div class="deadband-range" id="deadband-range-el"></div>
+                        </div>
+                        <div class="deadband-labels">
+                            <span>20°F</span><span>40°F</span><span>60°F</span><span>80°F</span><span>100°F</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:0.75rem;">
+                        <span class="section-label">Botrytis RH Threshold</span>
+                        <span id="botrytis-rh" class="mono" style="font-size:0.95rem; font-weight:700; color:var(--warn); margin-left:0.5rem;"></span>
+                    </div>
+                    <table style="margin-top:0.75rem;" id="crops-table">
+                        <thead><tr><th>Crop</th><th>Min °F</th><th>Max °F</th><th>Botrytis RH</th></tr></thead>
+                        <tbody id="crops-table-body"></tbody>
+                    </table>
+                    <div id="deadband-warnings"></div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Card 2: Growth Stage -->
+        <details class="card" id="card-growth">
+            <summary>
+                <span class="card-icon">🌱</span>
+                <span class="card-title">Growth Stage & Transpiration</span>
+                <span class="card-chevron">▶</span>
+            </summary>
+            <div class="card-body">
+                <div class="stage-input">
+                    <label>Planting Date <input type="date" id="plant-date"></label>
+                </div>
+                <div class="stage-timeline" aria-label="Growth stage progress">
+                    <div class="stage-segment" id="seg-seedling"></div>
+                    <div class="stage-segment" id="seg-vegetative"></div>
+                    <div class="stage-segment" id="seg-mature"></div>
+                </div>
+                <div id="growth-result" class="hidden">
+                    <div class="stage-result">
+                        <div class="stage-name" id="growth-stage-name"></div>
+                        <div class="stage-dap" id="growth-dap"></div>
+                        <div class="stage-transpiration" id="growth-transpiration"></div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Card 3: VPD Gauge -->
+        <details class="card" id="card-vpd">
+            <summary>
+                <span class="card-icon">💧</span>
+                <span class="card-title">Vapor Pressure Deficit (VPD)</span>
+                <span class="card-chevron">▶</span>
+            </summary>
+            <div class="card-body">
+                <div class="vpd-inputs">
+                    <label>Temperature °F <input type="number" id="vpd-temp" placeholder="72" min="-20" max="140" step="1"></label>
+                    <label>Humidity % <input type="number" id="vpd-rh" placeholder="65" min="0" max="100" step="1"></label>
+                </div>
+                <div id="vpd-result" class="hidden">
+                    <div class="vpd-gauge">
+                        <div class="vpd-value" id="vpd-value">0.00</div>
+                        <div class="vpd-unit">kPa</div>
+                        <div class="vpd-zone-badge" id="vpd-zone-badge"></div>
+                    </div>
+                    <div class="vpd-bar">
+                        <div class="vpd-needle" id="vpd-needle"></div>
+                    </div>
+                    <div class="vpd-bar-labels">
+                        <span>0.0</span><span>0.4</span><span>0.8</span><span>1.2</span><span>1.6</span><span>2.0+</span>
+                    </div>
+                    <div id="vpd-recommendation" class="alert alert-info" style="margin-top:0.75rem;"></div>
+                    <table style="margin-top:0.75rem;">
+                        <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+                        <tbody id="vpd-details"></tbody>
+                    </table>
+                </div>
+            </div>
+        </details>
+
+        <!-- Card 4: Wind Dynamics -->
+        <details class="card" id="card-wind">
+            <summary>
+                <span class="card-icon">🌬️</span>
+                <span class="card-title">Wind & Ventilation Dynamics</span>
+                <span class="card-chevron">▶</span>
+            </summary>
+            <div class="card-body">
+                <div class="wind-orient-toggle" role="group" aria-label="Greenhouse orientation">
+                    <button class="orient-btn" id="orient-ns" aria-pressed="true" type="button">N↔S Ridge</button>
+                    <button class="orient-btn" id="orient-ew" aria-pressed="false" type="button">E↔W Ridge</button>
+                </div>
+                <div class="wind-compass" id="wind-compass">
+                    <span class="compass-label n">N</span>
+                    <span class="compass-label e">E</span>
+                    <span class="compass-label s">S</span>
+                    <span class="compass-label w">W</span>
+                    <div class="wind-arrow" id="wind-arrow"></div>
+                    <div class="wind-greenhouse" id="wind-gh-icon"></div>
+                </div>
+                <div id="wind-result" class="hidden">
+                    <div style="text-align:center; margin-bottom:0.5rem;">
+                        <span class="section-label">Wind from</span>
+                        <span id="wind-from-label" style="font-size:1.1rem; font-weight:700; margin-left:0.35rem;"></span>
+                    </div>
+                    <div id="wind-mode-badge" style="text-align:center; margin-bottom:0.75rem;"></div>
+                    <ul class="wind-instructions" id="wind-instructions"></ul>
+                </div>
+            </div>
+        </details>
+    </main>
+
+    <footer>
+        <p>Greenhouse Assist v1.0 · Sensor-less Thermodynamic Engine</p>
+        <p>Spear Farm · 44.08°N, 69.49°W · USDA Zone 5b</p>
+        <p style="margin-top:0.35rem;">Powered by <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a></p>
+    </footer>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         INLINED ENGINE — All logic from Greenhouse Assist.js
+         Inlined to avoid CORS errors when opening from file:// protocol.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <script>
+    // =====================================================================
+    // GREENHOUSE ASSIST ENGINE — INLINED
+    // =====================================================================
+
+    const CROP_PROFILES = {
+        solanaceous: {
+            icon: '🍅',
+            label: 'Solanaceous (Tomatoes / Peppers)',
+            minTemp: 70, maxTemp: 85,
+            nightMinTemp: 60, nightMaxTemp: 68,
+            botrytisRH: 85
+        },
+        coldHardyGreens: {
+            icon: '🥬',
+            label: 'Cold-Hardy Greens (Spinach / Kale)',
+            minTemp: 35, maxTemp: 70,
+            nightMinTemp: 28, nightMaxTemp: 55,
+            botrytisRH: 80
+        },
+        cucurbits: {
+            icon: '🥒',
+            label: 'Cucurbits (Cucumbers / Melons)',
+            minTemp: 75, maxTemp: 90,
+            nightMinTemp: 60, nightMaxTemp: 70,
+            botrytisRH: 90
+        },
+        rootVeggies: {
+            icon: '🥕',
+            label: 'Root Vegetables (Carrots / Beets)',
+            minTemp: 40, maxTemp: 75,
+            nightMinTemp: 35, nightMaxTemp: 60,
+            botrytisRH: 83
+        }
+    };
+
+    const CROP_TYPES = Object.keys(CROP_PROFILES);
+
+    function calculateCropNeeds(selectedCropIdsArray) {
+        if (!Array.isArray(selectedCropIdsArray) || selectedCropIdsArray.length === 0) {
+            throw new Error('calculateCropNeeds() requires a non-empty array of crop IDs.');
+        }
+        const validCrops = [];
+        const invalidIds = [];
+        for (const id of selectedCropIdsArray) {
+            const profile = CROP_PROFILES[id];
+            if (profile) {
+                validCrops.push({ id, icon: profile.icon, label: profile.label, minTemp: profile.minTemp, maxTemp: profile.maxTemp, nightMinTemp: profile.nightMinTemp, nightMaxTemp: profile.nightMaxTemp, botrytisRH: profile.botrytisRH });
+            } else {
+                invalidIds.push(id);
+            }
+        }
+        if (validCrops.length === 0) {
+            throw new Error('No valid crop IDs found.');
+        }
+
+        const deadbandMin = Math.max(...validCrops.map(c => c.minTemp));
+        const deadbandMax = Math.min(...validCrops.map(c => c.maxTemp));
+        const nightDeadbandMin = Math.max(...validCrops.map(c => c.nightMinTemp));
+        const nightDeadbandMax = Math.min(...validCrops.map(c => c.nightMaxTemp));
+        const conflict = deadbandMin > deadbandMax;
+        const nightConflict = nightDeadbandMin > nightDeadbandMax;
+
+        const result = {
+            crops: validCrops,
+            deadband: { min: deadbandMin, max: deadbandMax },
+            nightDeadband: { min: nightDeadbandMin, max: nightDeadbandMax },
+            conflict,
+            nightConflict,
+            botrytisRH: Math.min(...validCrops.map(c => c.botrytisRH)),
+            warnings: []
+        };
+
+        if (invalidIds.length > 0) {
+            result.warnings.push(`Skipped unknown crop ID(s): ${invalidIds.join(', ')}.`);
+        }
+
+        if (conflict) {
+            const sumMin = validCrops.reduce((s, c) => s + c.minTemp, 0);
+            const sumMax = validCrops.reduce((s, c) => s + c.maxTemp, 0);
+            const count = validCrops.length;
+            result.compromiseDeadband = {
+                min: Math.round(sumMin / count),
+                max: Math.round(sumMax / count)
+            };
+            const warmestFloor = validCrops.reduce((m, c) => c.minTemp > m.minTemp ? c : m, validCrops[0]);
+            const coolestCeiling = validCrops.reduce((m, c) => c.maxTemp < m.maxTemp ? c : m, validCrops[0]);
+            result.warnings.push(
+                `⚠️ THERMAL CONFLICT: ${warmestFloor.icon} ${warmestFloor.label} needs ≥${warmestFloor.minTemp}°F, but ${coolestCeiling.icon} ${coolestCeiling.label} must stay ≤${coolestCeiling.maxTemp}°F. There is a ${deadbandMin - deadbandMax}°F gap with NO safe overlap.`
+            );
+            result.warnings.push(
+                `🔀 COMPROMISE DEADBAND: Averaging all crops → ${result.compromiseDeadband.min}–${result.compromiseDeadband.max}°F. This is NOT optimal for any crop. Consider separating incompatible crops into different structures.`
+            );
+        } else if (validCrops.length > 1) {
+            const narrowing = (Math.max(...validCrops.map(c => c.maxTemp)) - Math.min(...validCrops.map(c => c.minTemp))) - (deadbandMax - deadbandMin);
+            if (narrowing > 0) {
+                result.warnings.push(
+                    `✅ Safe overlap found: ${deadbandMin}–${deadbandMax}°F (${deadbandMax - deadbandMin}°F window). Multi-crop selection narrowed the operating range by ${narrowing}°F.`
+                );
+            }
+        }
+        return result;
+    }
+
+    function getGrowthStage(plantDateString) {
+        const plantDate = new Date(plantDateString);
+        if (isNaN(plantDate.getTime())) {
+            throw new Error(`Invalid planting date: "${plantDateString}".`);
+        }
+        const today = new Date();
+        const msPerDay = 86400000;
+        const plantUTC = Date.UTC(plantDate.getFullYear(), plantDate.getMonth(), plantDate.getDate());
+        const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+        const dap = Math.floor((todayUTC - plantUTC) / msPerDay);
+
+        if (dap < 0) {
+            return {
+                plantDate: plantDate.toISOString().split('T')[0],
+                today: today.toISOString().split('T')[0],
+                daysAfterPlanting: dap,
+                stage: 'not_planted',
+                stageLabel: 'Not Yet Planted',
+                transpirationMultiplier: 0,
+                description: `Planting date is ${Math.abs(dap)} days in the future. No transpiration contribution until the crop is in the ground.`
+            };
+        }
+
+        let stage, stageLabel, transpirationMultiplier, description;
+        if (dap < 14) {
+            stage = 'seedling';
+            stageLabel = '🌱 Seedling Stage';
+            transpirationMultiplier = 2;
+            description = `DAP ${dap}: Early seedling establishment. Minimal leaf area (LAI 0.3–0.8). Transpiration is low — soil surface evaporation dominates. RH contribution: +2% above ambient. Watch for damping-off pathogens (Pythium/Rhizoctonia).`;
+        } else if (dap < 40) {
+            stage = 'vegetative';
+            stageLabel = '🌿 Vegetative Growth';
+            transpirationMultiplier = 6;
+            description = `DAP ${dap}: Active vegetative growth. Canopy expanding rapidly (LAI 1.5–3.0). RH contribution: +6% above ambient. Begin monitoring humidity — Botrytis risk elevates as the canopy creates humid microclimates.`;
+        } else {
+            stage = 'mature';
+            stageLabel = '🌳 Mature Canopy';
+            transpirationMultiplier = 12;
+            description = `DAP ${dap}: Full canopy closure. MASSIVE moisture dumping (LAI 3.0–6.0+). A mature crop transpires 1–3 L/plant/day. RH contribution: +12% above ambient. Aggressive venting essential to prevent Botrytis cinerea sporulation.`;
+        }
+
+        return {
+            plantDate: plantDate.toISOString().split('T')[0],
+            today: today.toISOString().split('T')[0],
+            daysAfterPlanting: dap,
+            stage, stageLabel, transpirationMultiplier, description
+        };
+    }
+
+    function calculateVPD(tempF, rh) {
+        if (typeof tempF !== 'number' || isNaN(tempF)) throw new Error(`calculateVPD(): tempF must be a number.`);
+        if (typeof rh !== 'number' || isNaN(rh) || rh < 0) throw new Error(`calculateVPD(): rh must be 0–100.`);
+        const clampedRH = Math.min(rh, 100);
+        const tempC = (tempF - 32) * 5 / 9;
+        const svp = 0.6108 * Math.exp((17.27 * tempC) / (tempC + 237.3));
+        const avp = svp * (clampedRH / 100);
+        const vpd = svp - avp;
+
+        let zone, zoneLabel, recommendation;
+        if (vpd < 0.4) {
+            zone = 'danger_wet'; zoneLabel = '🔵 Dangerously Humid';
+            recommendation = 'VPD below 0.4 kPa: Air is nearly saturated. Disease risk is EXTREME. Vent immediately, even if temperatures are low.';
+        } else if (vpd < 0.8) {
+            zone = 'ideal_low'; zoneLabel = '🟢 Ideal — Leafy Greens Zone';
+            recommendation = 'VPD 0.4–0.8 kPa: Optimal for leafy greens and transplants. Stomata fully open, gas exchange efficient.';
+        } else if (vpd < 1.2) {
+            zone = 'ideal_high'; zoneLabel = '🟢 Ideal — Fruiting Crops Zone';
+            recommendation = 'VPD 0.8–1.2 kPa: Optimal for fruiting crops (tomatoes, peppers, cucumbers). Calcium uptake maximized.';
+        } else if (vpd < 1.6) {
+            zone = 'stress_mild'; zoneLabel = '🟡 Mild Stress Zone';
+            recommendation = 'VPD 1.2–1.6 kPa: Plants beginning to close stomata. Consider fogging, misting, or partial shade.';
+        } else {
+            zone = 'danger_dry'; zoneLabel = '🔴 Dangerously Dry';
+            recommendation = 'VPD above 1.6 kPa: CRITICAL water stress. Photosynthesis stopped. Fog or mist immediately. Deploy shade cloth.';
+        }
+        return {
+            tempF, tempC: parseFloat(tempC.toFixed(2)), rh: clampedRH,
+            svp_kPa: parseFloat(svp.toFixed(4)), avp_kPa: parseFloat(avp.toFixed(4)),
+            vpd_kPa: parseFloat(vpd.toFixed(4)), zone, zoneLabel, recommendation
+        };
+    }
+
+    function classifyWindDirection(windDirDeg) {
+        const dir = ((windDirDeg % 360) + 360) % 360;
+        const compass = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+        const index = Math.round(dir / 22.5) % 16;
+        return {
+            degrees: dir,
+            from: compass[index],
+            quadrant: dir >= 315 || dir < 45 ? 'N' : dir >= 45 && dir < 135 ? 'E' : dir >= 135 && dir < 225 ? 'S' : 'W'
+        };
+    }
+
+    function calculateWindDynamics(windDirDegrees, orientation) {
+        orientation = orientation || 'NS';
+        const wind = classifyWindDirection(windDirDegrees);
+        const normOrient = orientation.toUpperCase().replace(/[^NSEW]/g, '');
+
+        const result = {
+            windFrom: wind.from, windDegrees: wind.degrees, windQuadrant: wind.quadrant,
+            orientation: normOrient, sidewallFaces: null, gableEndFaces: null,
+            windward: null, leeward: null, isBernoulliMode: false,
+            pressureProfile: null, ventInstructions: [], riskLevel: null, warnings: []
+        };
+
+        if (normOrient === 'NS') {
+            result.sidewallFaces = ['E', 'W'];
+            result.gableEndFaces = ['N', 'S'];
+        } else {
+            result.sidewallFaces = ['N', 'S'];
+            result.gableEndFaces = ['E', 'W'];
+        }
+
+        const isParallelFlow = result.gableEndFaces.includes(wind.quadrant);
+        if (isParallelFlow) {
+            result.isBernoulliMode = true;
+            result.riskLevel = 'safe_vacuum';
+            result.windward = `${wind.quadrant} gable end (direct impact)`;
+            result.leeward = `${wind.quadrant === result.gableEndFaces[0] ? result.gableEndFaces[1] : result.gableEndFaces[0]} gable end (wake zone)`;
+            result.ventInstructions = [
+                `✅ SAFE: Wind from ${wind.from} flows PARALLEL to the ${result.sidewallFaces.join(' & ')} sidewalls.`,
+                `Bernoulli vacuum effect active on BOTH ${result.sidewallFaces.join(' & ')} sides.`,
+                `Open BOTH sidewalls for gentle, even exhaust ventilation.`,
+                `This is the safest and most efficient natural ventilation mode.`,
+                `No blowout risk — wind pressure is PULLING air out, not pushing in.`
+            ];
+        } else {
+            result.isBernoulliMode = false;
+            result.riskLevel = 'cross_wind';
+            if (result.sidewallFaces.includes(wind.quadrant)) {
+                result.windward = `${wind.quadrant} sidewall (BROADSIDE — direct exposure)`;
+                result.leeward = `${wind.quadrant === result.sidewallFaces[0] ? result.sidewallFaces[1] : result.sidewallFaces[0]} sidewall (sheltered)`;
+            } else {
+                result.windward = `${wind.quadrant} (oblique approach)`;
+                result.leeward = 'opposite side';
+            }
+            result.ventInstructions = [
+                `⚠️ CROSS-WIND: Wind from ${wind.from} is hitting the ${result.windward}.`,
+                `HIGH BLOWOUT RISK on the windward side.`,
+                `LEEWARD side (${result.leeward}) is safe for exhaust venting.`,
+                `For cooling: open LEEWARD side first, then optionally crack windward for cross-flow.`,
+                `On poly-covered tunnels: NEVER fully open the windward side in cross-wind.`
+            ];
+        }
+        return result;
+    }
+
+    // =====================================================================
+    // UI CONTROLLER
+    // =====================================================================
+
+    const state = {
+        selectedCrops: new Set(),
+        orientation: 'NS',
+        weather: null
+    };
+
+    // ── Clock ──
+    function updateClock() {
+        const el = document.getElementById('header-time');
+        el.textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+    updateClock();
+    setInterval(updateClock, 30000);
+
+    // ── Weather ──
+    function degToCompass(deg) {
+        const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+        return dirs[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+    }
+
+    async function fetchWeather() {
+        const banner = document.getElementById('weather-banner');
+        try {
+            const url = 'https://api.open-meteo.com/v1/forecast?latitude=44.08&longitude=-69.49&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York';
+            const resp = await fetch(url);
+            const data = await resp.json();
+            const c = data.current;
+            state.weather = { tempF: c.temperature_2m, rh: c.relative_humidity_2m, windMph: c.wind_speed_10m, windDir: c.wind_direction_10m };
+
+            document.getElementById('wx-temp').textContent = Math.round(c.temperature_2m) + '°';
+            document.getElementById('wx-rh').textContent = Math.round(c.relative_humidity_2m) + '%';
+            document.getElementById('wx-wind').textContent = Math.round(c.wind_speed_10m);
+            document.getElementById('wx-wind-dir').textContent = degToCompass(c.wind_direction_10m);
+            banner.setAttribute('aria-busy', 'false');
+
+            // Auto-fill VPD
+            const vpdTemp = document.getElementById('vpd-temp');
+            const vpdRH = document.getElementById('vpd-rh');
+            if (!vpdTemp.value) vpdTemp.value = Math.round(c.temperature_2m);
+            if (!vpdRH.value) vpdRH.value = Math.round(c.relative_humidity_2m);
+            runVPD();
+            runWind(c.wind_direction_10m);
+        } catch (err) {
+            console.warn('[weather] Fetch failed:', err.message);
+            banner.setAttribute('aria-busy', 'false');
+            document.getElementById('wx-temp').textContent = '—';
+        }
+    }
+
+    // ── Crop Selector ──
+    function buildCropChips() {
+        const container = document.getElementById('crop-chips');
+        for (const id of CROP_TYPES) {
+            const profile = CROP_PROFILES[id];
+            const btn = document.createElement('button');
+            btn.className = 'crop-chip';
+            btn.type = 'button';
+            btn.setAttribute('aria-pressed', 'false');
+            btn.dataset.cropId = id;
+            btn.innerHTML = `${profile.icon} ${profile.label.split('(')[0].trim()}`;
+            btn.addEventListener('click', function() {
+                const pressed = this.getAttribute('aria-pressed') === 'true';
+                this.setAttribute('aria-pressed', String(!pressed));
+                if (pressed) state.selectedCrops.delete(id);
+                else state.selectedCrops.add(id);
+                runDeadband();
+            });
+            container.appendChild(btn);
+        }
+    }
+
+    function runDeadband() {
+        const resultEl = document.getElementById('deadband-result');
+        if (state.selectedCrops.size === 0) { resultEl.classList.add('hidden'); return; }
+
+        const result = calculateCropNeeds([...state.selectedCrops]);
+        resultEl.classList.remove('hidden');
+
+        const rangeEl = document.getElementById('deadband-range-el');
+        const min = result.conflict ? (result.compromiseDeadband?.min ?? result.deadband.min) : result.deadband.min;
+        const max = result.conflict ? (result.compromiseDeadband?.max ?? result.deadband.max) : result.deadband.max;
+        const barMin = 20, barMax = 100;
+        const leftPct = Math.max(0, (min - barMin) / (barMax - barMin) * 100);
+        const rightPct = Math.min(100, (max - barMin) / (barMax - barMin) * 100);
+        rangeEl.style.left = leftPct + '%';
+        rangeEl.style.width = Math.max(0, rightPct - leftPct) + '%';
+
+        if (result.conflict) {
+            rangeEl.style.borderColor = 'var(--warn)';
+            rangeEl.style.background = 'rgba(230,168,23,0.3)';
+        } else {
+            rangeEl.style.borderColor = 'var(--safe)';
+            rangeEl.style.background = 'rgba(56,183,100,0.45)';
+        }
+
+        document.getElementById('deadband-range-text').textContent = result.conflict
+            ? `⚠️ ${result.compromiseDeadband.min}–${result.compromiseDeadband.max}°F (compromise)`
+            : `${result.deadband.min}–${result.deadband.max}°F`;
+
+        document.getElementById('botrytis-rh').textContent = result.botrytisRH + '% RH';
+
+        document.getElementById('crops-table-body').innerHTML = result.crops.map(c =>
+            `<tr><td>${c.icon} ${c.label.split('(')[0].trim()}</td><td class="mono">${c.minTemp}°</td><td class="mono">${c.maxTemp}°</td><td class="mono">${c.botrytisRH}%</td></tr>`
+        ).join('');
+
+        document.getElementById('deadband-warnings').innerHTML = result.warnings.map(w => {
+            const cls = w.includes('CONFLICT') ? 'alert-danger' : w.includes('COMPROMISE') ? 'alert-warn' : 'alert-safe';
+            return `<div class="alert ${cls}">${w}</div>`;
+        }).join('');
+    }
+
+    // ── Growth Stage ──
+    function runGrowthStage() {
+        const dateInput = document.getElementById('plant-date');
+        const resultEl = document.getElementById('growth-result');
+        if (!dateInput.value) {
+            resultEl.classList.add('hidden');
+            document.querySelectorAll('.stage-segment').forEach(s => s.className = 'stage-segment');
+            return;
+        }
+        try {
+            const result = getGrowthStage(dateInput.value);
+            resultEl.classList.remove('hidden');
+            document.getElementById('growth-stage-name').textContent = result.stageLabel;
+            document.getElementById('growth-dap').textContent = `Day ${result.daysAfterPlanting} after planting · ${result.plantDate}`;
+            document.getElementById('growth-transpiration').innerHTML =
+                `<strong>RH boost: +${result.transpirationMultiplier}%</strong> above ambient<br><span style="color:var(--text-dim); font-size:0.78rem;">${result.description}</span>`;
+
+            const stages = ['seedling', 'vegetative', 'mature'];
+            const stageIndex = stages.indexOf(result.stage);
+            document.querySelectorAll('.stage-segment').forEach((seg, i) => {
+                seg.className = 'stage-segment';
+                if (result.stage === 'not_planted') return;
+                if (i < stageIndex) seg.classList.add('past');
+                if (i === stageIndex) seg.classList.add('active');
+            });
+        } catch (err) { console.warn('[growth] Error:', err.message); }
+    }
+
+    document.getElementById('plant-date').addEventListener('change', runGrowthStage);
+    // Default: 30 days ago
+    const demoDate = new Date(); demoDate.setDate(demoDate.getDate() - 30);
+    document.getElementById('plant-date').value = demoDate.toISOString().split('T')[0];
+
+    // ── VPD ──
+    function runVPD() {
+        const tempF = parseFloat(document.getElementById('vpd-temp').value);
+        const rh = parseFloat(document.getElementById('vpd-rh').value);
+        const resultEl = document.getElementById('vpd-result');
+        if (isNaN(tempF) || isNaN(rh)) { resultEl.classList.add('hidden'); return; }
+
+        try {
+            const result = calculateVPD(tempF, rh);
+            resultEl.classList.remove('hidden');
+
+            const valEl = document.getElementById('vpd-value');
+            valEl.textContent = result.vpd_kPa.toFixed(2);
+
+            const zoneColors = {
+                danger_wet: 'var(--vpd-wet)', ideal_low: 'var(--vpd-ideal)', ideal_high: 'var(--vpd-ideal)',
+                stress_mild: 'var(--vpd-stress)', danger_dry: 'var(--vpd-dry)'
+            };
+            const badgeBgs = {
+                danger_wet: 'rgba(59,130,246,0.15)', ideal_low: 'rgba(34,197,94,0.15)',
+                ideal_high: 'rgba(34,197,94,0.15)', stress_mild: 'rgba(234,179,8,0.15)',
+                danger_dry: 'rgba(239,68,68,0.15)'
+            };
+
+            valEl.style.color = zoneColors[result.zone];
+
+            const badge = document.getElementById('vpd-zone-badge');
+            badge.textContent = result.zoneLabel;
+            badge.style.background = badgeBgs[result.zone];
+            badge.style.color = zoneColors[result.zone];
+
+            const needle = document.getElementById('vpd-needle');
+            needle.style.left = `calc(${Math.min(100, Math.max(0, (result.vpd_kPa / 2.0) * 100))}% - 2px)`;
+
+            document.getElementById('vpd-recommendation').textContent = result.recommendation;
+
+            document.getElementById('vpd-details').innerHTML = `
+                <tr><td>Temperature</td><td class="mono">${result.tempF}°F (${result.tempC}°C)</td></tr>
+                <tr><td>Relative Humidity</td><td class="mono">${result.rh}%</td></tr>
+                <tr><td>Saturation VP</td><td class="mono">${result.svp_kPa} kPa</td></tr>
+                <tr><td>Actual VP</td><td class="mono">${result.avp_kPa} kPa</td></tr>
+                <tr><td>VPD</td><td class="mono" style="font-weight:700;">${result.vpd_kPa} kPa</td></tr>`;
+
+            const recEl = document.getElementById('vpd-recommendation');
+            recEl.className = 'alert ' + (
+                (result.zone === 'danger_wet' || result.zone === 'danger_dry') ? 'alert-danger' :
+                result.zone === 'stress_mild' ? 'alert-warn' : 'alert-safe'
+            );
+        } catch (err) { console.warn('[vpd] Error:', err.message); }
+    }
+
+    document.getElementById('vpd-temp').addEventListener('input', runVPD);
+    document.getElementById('vpd-rh').addEventListener('input', runVPD);
+
+    // ── Wind ──
+    function runWind(dirOverride) {
+        const dir = dirOverride ?? state.weather?.windDir;
+        if (dir == null) return;
+        const resultEl = document.getElementById('wind-result');
+        const ghIcon = document.getElementById('wind-gh-icon');
+
+        try {
+            const result = calculateWindDynamics(dir, state.orientation);
+            resultEl.classList.remove('hidden');
+
+            document.getElementById('wind-arrow').style.transform = `translate(-50%, -100%) rotate(${dir + 180}deg)`;
+
+            ghIcon.className = 'wind-greenhouse';
+            if (state.orientation === 'EW') ghIcon.classList.add('ew');
+
+            document.getElementById('wind-from-label').textContent = `${result.windFrom} (${result.windDegrees}°)`;
+
+            const modeBadge = document.getElementById('wind-mode-badge');
+            modeBadge.innerHTML = result.isBernoulliMode
+                ? `<span class="alert alert-safe" style="display:inline-block;">✅ Bernoulli Vacuum — Safe Venting</span>`
+                : `<span class="alert alert-warn" style="display:inline-block;">⚠️ Cross-Wind — Caution</span>`;
+
+            document.getElementById('wind-instructions').innerHTML = result.ventInstructions.map(instr => {
+                const cls = instr.startsWith('✅') ? 'safe' : instr.startsWith('⚠️') ? 'warn' : '';
+                return `<li class="${cls}">${instr}</li>`;
+            }).join('');
+        } catch (err) { console.warn('[wind] Error:', err.message); }
+    }
+
+    document.getElementById('orient-ns').addEventListener('click', function() {
+        state.orientation = 'NS';
+        this.setAttribute('aria-pressed', 'true');
+        document.getElementById('orient-ew').setAttribute('aria-pressed', 'false');
+        runWind();
+    });
+    document.getElementById('orient-ew').addEventListener('click', function() {
+        state.orientation = 'EW';
+        this.setAttribute('aria-pressed', 'true');
+        document.getElementById('orient-ns').setAttribute('aria-pressed', 'false');
+        runWind();
+    });
+
+    // ── Boot ──
+    async function boot() {
+        console.log('%c 🌿 Greenhouse Assist v1.0 ', 'background:#1a1e12;color:#8fd95f;font-size:14px;font-weight:bold;padding:4px 10px;border-radius:4px;border:1px solid #4a7c2e;');
+        buildCropChips();
+        runGrowthStage();
+        await fetchWeather();
+        setInterval(fetchWeather, 5 * 60 * 1000);
+        console.log('%c Engine ready. All modules loaded.', 'color:#6aad3d');
+    }
+
+    boot();
+
+    // Console API
+    window.greenhouse = {
+        CROP_PROFILES, CROP_TYPES, calculateCropNeeds, getGrowthStage,
+        calculateVPD, calculateWindDynamics, state
+    };
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greenhouse Command | Practical Farm Tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'farm-green': '#1a9b3d',
+                        'farm-badge': '#5dbb77',
+                        'farm-dark': '#0c6623',
+                        'farm-bg': '#f8f9fa'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: theme('colors.farm-bg'); font-family: ui-sans-serif, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .collapse-icon { transition: transform 0.2s; }
+        details[open] .collapse-icon { transform: rotate(180deg); }
+
+        /* Physics injection panel styles */
+        .phys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        @media (max-width: 480px) { .phys-grid { grid-template-columns: 1fr; } }
+        .phys-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            overflow: hidden;
+        }
+        .phys-card-header {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+            margin-bottom: 0.35rem;
+        }
+        .phys-val {
+            font-size: 1.25rem;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+        .phys-sub {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-top: 0.15rem;
+        }
+        .phys-bar {
+            height: 6px;
+            border-radius: 3px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .phys-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+        .phys-alert {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.5rem 0.65rem;
+            border-radius: 0.5rem;
+            line-height: 1.4;
+            margin-top: 0.5rem;
+        }
+        .phys-alert-warn { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .phys-alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .phys-alert-safe { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .phys-alert-info { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+
+        .wind-compass-mini {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            border: 2px solid #e5e7eb;
+            background: #f9fafb;
+            position: relative;
+            margin: 0 auto 0.25rem;
+        }
+        .wind-compass-mini .wc-label {
+            position: absolute;
+            font-size: 7px;
+            font-weight: 800;
+            color: #9ca3af;
+        }
+        .wind-compass-mini .wc-n { top: 2px; left: 50%; transform: translateX(-50%); }
+        .wind-compass-mini .wc-s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+        .wind-compass-mini .wc-e { right: 4px; top: 50%; transform: translateY(-50%); }
+        .wind-compass-mini .wc-w { left: 4px; top: 50%; transform: translateY(-50%); }
+        .wind-arrow-mini {
+            position: absolute; top: 50%; left: 50%;
+            width: 3px; height: 22px;
+            background: linear-gradient(to top, transparent, #1a9b3d);
+            border-radius: 2px;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+            transition: transform 0.5s ease;
+        }
+        .wind-arrow-mini::after {
+            content: '';
+            position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+            border-left: 4px solid transparent; border-right: 4px solid transparent;
+            border-bottom: 7px solid #1a9b3d;
+        }
+        .wind-gh-mini {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 14px; height: 10px;
+            border: 1.5px solid #1a9b3d; border-radius: 2px 2px 0 0;
+            background: rgba(26,155,61,0.08);
+        }
+        .wind-gh-mini.ew { width: 10px; height: 14px; }
+    </style>
+</head>
+<body class="pb-16 text-gray-800">
+
+    <header class="bg-farm-green text-white p-6 shadow-md border-b-4 border-green-900/20">
+        <div class="max-w-2xl mx-auto">
+            <p class="text-[10px] font-bold tracking-widest uppercase mb-1 opacity-90 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 22h20M12 22v-9M12 13C8 13 5 10 5 6M12 13C16 13 19 10 19 6M5 6h.01M19 6h.01"/></svg>
+                Practical Farm Tools
+            </p>
+            <h1 class="text-3xl font-black tracking-tight mb-2">Greenhouse Command</h1>
+            <span class="bg-farm-badge px-2 py-1 rounded text-[10px] font-bold tracking-widest uppercase shadow-sm">2026 SEASON</span>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto p-4 sm:p-6 mt-2">
+        
+        <div class="bg-white rounded-xl shadow-sm p-5 mb-8 border border-gray-200">
+            <h2 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Live Nobleboro Weather</h2>
+            <div class="flex justify-between items-end">
+                <div class="flex items-baseline gap-2">
+                    <span id="gw-temp" class="text-4xl font-black text-farm-dark">--°</span>
+                    <span id="gw-rh" class="text-sm font-bold text-gray-500">--% RH</span>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-bold text-gray-800">Wind: <span id="gw-wind">--</span> mph <span id="gw-dir" class="text-farm-green uppercase"></span></p>
+                    <p class="text-xs font-medium text-gray-500">Clouds: <span id="gw-cloud">--</span>%</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-end mb-4">
+            <h3 class="text-xl font-bold text-gray-800 tracking-tight">Active Structures</h3>
+            <button onclick="toggleModal()" class="text-sm font-bold text-farm-green hover:underline flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Add Structure
+            </button>
+        </div>
+
+        <div id="greenhouse-container" class="space-y-4"></div>
+
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div id="add-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                <h3 id="modal-title" class="text-lg font-bold text-farm-dark">Configure Structure</h3>
+                <button onclick="toggleModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto space-y-4">
+                <input type="hidden" id="gh-id">
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Name</label>
+                    <input type="text" id="gh-name" placeholder="e.g. Tomato House" class="w-full p-2.5 border rounded-lg border-gray-300 focus:border-farm-green outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Orientation</label>
+                    <select id="gh-orientation" class="w-full p-2.5 border rounded-lg border-gray-300 bg-white focus:border-farm-green outline-none">
+                        <option value="NS">North-South</option>
+                        <option value="EW">East-West</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Plant Date</label>
+                    <input type="date" id="gh-date" class="w-full p-2.5 border rounded-lg border-gray-300 text-gray-700 focus:border-farm-green outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Crops Present</label>
+                    <div id="crop-checkboxes" class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium cursor-pointer"><input type="checkbox" value="solanaceous" class="crop-cb accent-farm-green"> Tomatoes/Peppers</label>
+                        <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium cursor-pointer"><input type="checkbox" value="greens" class="crop-cb accent-farm-green"> Hardy Greens</label>
+                        <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium cursor-pointer"><input type="checkbox" value="cucurbits" class="crop-cb accent-farm-green"> Cucurbits</label>
+                        <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium cursor-pointer"><input type="checkbox" value="root" class="crop-cb accent-farm-green"> Root Veggies</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-gray-100 flex gap-2">
+                <button onclick="toggleModal()" class="flex-1 p-2.5 border border-gray-300 text-gray-600 rounded-lg font-bold hover:bg-gray-50">Cancel</button>
+                <button onclick="saveGreenhouse()" class="flex-1 p-2.5 bg-farm-green text-white rounded-lg font-bold hover:bg-[#158d3c]">Save Structure</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    // =====================================================================
+    // GREENHOUSE ASSIST ENGINE — INLINED (from Greenhouse Assist.js)
+    // Crop profiles, deadband calculator, growth stage, VPD, wind dynamics
+    // =====================================================================
+
+    const CROP_PROFILES = {
+        solanaceous: { icon: '🍅', label: 'Solanaceous (Tomatoes / Peppers)', minTemp: 70, maxTemp: 85, nightMinTemp: 60, nightMaxTemp: 68, botrytisRH: 85 },
+        coldHardyGreens: { icon: '🥬', label: 'Cold-Hardy Greens (Spinach / Kale)', minTemp: 35, maxTemp: 70, nightMinTemp: 28, nightMaxTemp: 55, botrytisRH: 80 },
+        cucurbits: { icon: '🥒', label: 'Cucurbits (Cucumbers / Melons)', minTemp: 75, maxTemp: 90, nightMinTemp: 60, nightMaxTemp: 70, botrytisRH: 90 },
+        rootVeggies: { icon: '🥕', label: 'Root Vegetables (Carrots / Beets)', minTemp: 40, maxTemp: 75, nightMinTemp: 35, nightMaxTemp: 60, botrytisRH: 83 }
+    };
+
+    // Map checkbox values → engine crop IDs
+    const CROP_ID_MAP = {
+        'solanaceous': 'solanaceous',
+        'greens': 'coldHardyGreens',
+        'cucurbits': 'cucurbits',
+        'root': 'rootVeggies'
+    };
+
+    function calculateCropNeeds(selectedCropIdsArray) {
+        if (!Array.isArray(selectedCropIdsArray) || selectedCropIdsArray.length === 0) return null;
+        const validCrops = [];
+        for (const id of selectedCropIdsArray) {
+            const profile = CROP_PROFILES[id];
+            if (profile) validCrops.push({ id, icon: profile.icon, label: profile.label, minTemp: profile.minTemp, maxTemp: profile.maxTemp, nightMinTemp: profile.nightMinTemp, nightMaxTemp: profile.nightMaxTemp, botrytisRH: profile.botrytisRH });
+        }
+        if (validCrops.length === 0) return null;
+
+        const deadbandMin = Math.max(...validCrops.map(c => c.minTemp));
+        const deadbandMax = Math.min(...validCrops.map(c => c.maxTemp));
+        const nightDeadbandMin = Math.max(...validCrops.map(c => c.nightMinTemp));
+        const nightDeadbandMax = Math.min(...validCrops.map(c => c.nightMaxTemp));
+        const conflict = deadbandMin > deadbandMax;
+        const nightConflict = nightDeadbandMin > nightDeadbandMax;
+
+        const result = {
+            crops: validCrops,
+            deadband: { min: deadbandMin, max: deadbandMax },
+            nightDeadband: { min: nightDeadbandMin, max: nightDeadbandMax },
+            conflict,
+            nightConflict,
+            botrytisRH: Math.min(...validCrops.map(c => c.botrytisRH)),
+            warnings: []
+        };
+
+        if (conflict) {
+            const sumMin = validCrops.reduce((s, c) => s + c.minTemp, 0);
+            const sumMax = validCrops.reduce((s, c) => s + c.maxTemp, 0);
+            const count = validCrops.length;
+            result.compromiseDeadband = { min: Math.round(sumMin / count), max: Math.round(sumMax / count) };
+            const warmestFloor = validCrops.reduce((m, c) => c.minTemp > m.minTemp ? c : m, validCrops[0]);
+            const coolestCeiling = validCrops.reduce((m, c) => c.maxTemp < m.maxTemp ? c : m, validCrops[0]);
+            result.warnings.push(`⚠️ THERMAL CONFLICT: ${warmestFloor.icon} ${warmestFloor.label} needs ≥${warmestFloor.minTemp}°F, but ${coolestCeiling.icon} ${coolestCeiling.label} must stay ≤${coolestCeiling.maxTemp}°F.`);
+            result.warnings.push(`🔀 COMPROMISE: ${result.compromiseDeadband.min}–${result.compromiseDeadband.max}°F. Not optimal for any crop.`);
+        } else if (validCrops.length > 1) {
+            const narrowing = (Math.max(...validCrops.map(c => c.maxTemp)) - Math.min(...validCrops.map(c => c.minTemp))) - (deadbandMax - deadbandMin);
+            if (narrowing > 0) {
+                result.warnings.push(`✅ Safe overlap: ${deadbandMin}–${deadbandMax}°F (${deadbandMax - deadbandMin}°F window). Narrowed by ${narrowing}°F.`);
+            }
+        }
+        return result;
+    }
+
+    function getGrowthStage(plantDateString) {
+        const plantDate = new Date(plantDateString);
+        if (isNaN(plantDate.getTime())) return null;
+        const today = new Date();
+        const msPerDay = 86400000;
+        const plantUTC = Date.UTC(plantDate.getFullYear(), plantDate.getMonth(), plantDate.getDate());
+        const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+        const dap = Math.floor((todayUTC - plantUTC) / msPerDay);
+
+        if (dap < 0) return { daysAfterPlanting: dap, stage: 'not_planted', stageLabel: 'Not Yet Planted', transpirationMultiplier: 0, description: `${Math.abs(dap)} days until planting.` };
+
+        let stage, stageLabel, transpirationMultiplier, description;
+        if (dap < 14) {
+            stage = 'seedling'; stageLabel = '🌱 Seedling'; transpirationMultiplier = 2;
+            description = `DAP ${dap}: Minimal leaf area. +2% RH above ambient.`;
+        } else if (dap < 40) {
+            stage = 'vegetative'; stageLabel = '🌿 Vegetative'; transpirationMultiplier = 6;
+            description = `DAP ${dap}: Canopy expanding. +6% RH. Monitor humidity.`;
+        } else {
+            stage = 'mature'; stageLabel = '🌳 Mature'; transpirationMultiplier = 12;
+            description = `DAP ${dap}: Full canopy. +12% RH. Aggressive venting needed.`;
+        }
+
+        return { daysAfterPlanting: dap, stage, stageLabel, transpirationMultiplier, description };
+    }
+
+    function calculateVPD(tempF, rh) {
+        if (typeof tempF !== 'number' || typeof rh !== 'number') return null;
+        const clampedRH = Math.min(Math.max(rh, 0), 100);
+        const tempC = (tempF - 32) * 5 / 9;
+        const svp = 0.6108 * Math.exp((17.27 * tempC) / (tempC + 237.3));
+        const avp = svp * (clampedRH / 100);
+        const vpd = svp - avp;
+
+        let zone, zoneLabel, recommendation;
+        if (vpd < 0.4) { zone = 'danger_wet'; zoneLabel = '🔵 Dangerously Humid'; recommendation = 'Vent immediately. Disease risk EXTREME.'; }
+        else if (vpd < 0.8) { zone = 'ideal_low'; zoneLabel = '🟢 Ideal (Greens)'; recommendation = 'Optimal for leafy greens & seedlings.'; }
+        else if (vpd < 1.2) { zone = 'ideal_high'; zoneLabel = '🟢 Ideal (Fruiting)'; recommendation = 'Optimal for tomatoes, peppers, cucumbers.'; }
+        else if (vpd < 1.6) { zone = 'stress_mild'; zoneLabel = '🟡 Mild Stress'; recommendation = 'Plants closing stomata. Consider misting.'; }
+        else { zone = 'danger_dry'; zoneLabel = '🔴 Dangerously Dry'; recommendation = 'CRITICAL stress. Fog immediately.'; }
+
+        return { vpd_kPa: parseFloat(vpd.toFixed(4)), zone, zoneLabel, recommendation };
+    }
+
+    function classifyWindDirection(windDirDeg) {
+        const dir = ((windDirDeg % 360) + 360) % 360;
+        const compass = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+        return {
+            degrees: dir,
+            from: compass[Math.round(dir / 22.5) % 16],
+            quadrant: dir >= 315 || dir < 45 ? 'N' : dir >= 45 && dir < 135 ? 'E' : dir >= 135 && dir < 225 ? 'S' : 'W'
+        };
+    }
+
+    function calculateWindDynamics(windDirDegrees, orientation) {
+        orientation = orientation || 'NS';
+        const wind = classifyWindDirection(windDirDegrees);
+        const normOrient = orientation.toUpperCase().replace(/[^NSEW]/g, '');
+
+        const result = {
+            windFrom: wind.from, windDegrees: wind.degrees, windQuadrant: wind.quadrant,
+            orientation: normOrient, sidewallFaces: null, gableEndFaces: null,
+            isBernoulliMode: false, ventInstructions: [], riskLevel: null
+        };
+
+        if (normOrient === 'NS') { result.sidewallFaces = ['E','W']; result.gableEndFaces = ['N','S']; }
+        else { result.sidewallFaces = ['N','S']; result.gableEndFaces = ['E','W']; }
+
+        const isParallelFlow = result.gableEndFaces.includes(wind.quadrant);
+        if (isParallelFlow) {
+            result.isBernoulliMode = true;
+            result.riskLevel = 'safe_vacuum';
+            result.ventInstructions = [
+                `✅ Wind from ${wind.from} flows PARALLEL to sidewalls.`,
+                `Bernoulli vacuum on both ${result.sidewallFaces.join(' & ')} sides.`,
+                `Safe to open both sidewalls for even ventilation.`
+            ];
+        } else {
+            result.isBernoulliMode = false;
+            result.riskLevel = 'cross_wind';
+            const windward = wind.quadrant;
+            const leeward = windward === result.sidewallFaces[0] ? result.sidewallFaces[1] : result.sidewallFaces[0];
+            result.ventInstructions = [
+                `⚠️ CROSS-WIND from ${wind.from} hitting ${windward} sidewall.`,
+                `Open LEEWARD (${leeward}) side first for safe exhaust.`,
+                `NEVER fully open windward side on poly tunnels.`
+            ];
+        }
+        return result;
+    }
+
+    // =====================================================================
+    // STATE MANAGEMENT
+    // =====================================================================
+    let state = {
+        houses: JSON.parse(localStorage.getItem('nobleboro-houses-v7')) || [],
+        weather: null
+    };
+
+    // =====================================================================
+    // WEATHER FETCH
+    // =====================================================================
+    async function fetchWeather() {
+        try {
+            const url = 'https://api.open-meteo.com/v1/forecast?latitude=44.08&longitude=-69.49&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,cloud_cover&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York';
+            const resp = await fetch(url);
+            const data = await resp.json();
+            const c = data.current;
+
+            state.weather = {
+                tempF: c.temperature_2m,
+                rh: c.relative_humidity_2m,
+                windMph: c.wind_speed_10m,
+                windDir: c.wind_direction_10m,
+                cloud: c.cloud_cover
+            };
+
+            const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+            const compassDir = dirs[Math.round(((c.wind_direction_10m % 360) + 360) % 360 / 22.5) % 16];
+
+            document.getElementById('gw-temp').textContent = Math.round(c.temperature_2m) + '°';
+            document.getElementById('gw-rh').textContent = Math.round(c.relative_humidity_2m) + '% RH';
+            document.getElementById('gw-wind').textContent = Math.round(c.wind_speed_10m);
+            document.getElementById('gw-dir').textContent = compassDir;
+            document.getElementById('gw-cloud').textContent = Math.round(c.cloud_cover);
+
+            // Re-render physics panels with live weather
+            injectAllPhysics();
+        } catch (err) {
+            console.warn('[weather] Fetch failed:', err.message);
+        }
+    }
+
+    // =====================================================================
+    // MODAL
+    // =====================================================================
+    function toggleModal(editId = null) {
+        const modal = document.getElementById('add-modal');
+        modal.classList.toggle('hidden');
+        
+        if (editId) {
+            const h = state.houses.find(x => x.id === editId);
+            document.getElementById('modal-title').innerText = "Edit Structure";
+            document.getElementById('gh-id').value = h.id;
+            document.getElementById('gh-name').value = h.name;
+            document.getElementById('gh-orientation').value = h.orientation;
+            document.getElementById('gh-date').value = h.plantDate;
+            document.querySelectorAll('.crop-cb').forEach(cb => cb.checked = h.crops.includes(cb.value));
+        } else {
+            document.getElementById('modal-title').innerText = "Add Structure";
+            document.getElementById('gh-id').value = '';
+            document.getElementById('gh-name').value = '';
+            document.getElementById('gh-orientation').value = 'NS';
+            document.getElementById('gh-date').value = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('.crop-cb').forEach(cb => cb.checked = false);
+        }
+    }
+
+    function saveGreenhouse() {
+        const id = document.getElementById('gh-id').value || Date.now().toString();
+        const crops = Array.from(document.querySelectorAll('.crop-cb:checked')).map(cb => cb.value);
+        
+        const data = {
+            id: id,
+            name: document.getElementById('gh-name').value || "Unnamed Structure",
+            orientation: document.getElementById('gh-orientation').value,
+            plantDate: document.getElementById('gh-date').value,
+            crops: crops.length ? crops : ['greens'],
+            notes: state.houses.find(h => h.id === id)?.notes || ''
+        };
+
+        const existingIndex = state.houses.findIndex(h => h.id === id);
+        if (existingIndex > -1) state.houses[existingIndex] = data;
+        else state.houses.push(data);
+
+        localStorage.setItem('nobleboro-houses-v7', JSON.stringify(state.houses));
+        toggleModal();
+        renderGreenhouses();
+    }
+
+    function deleteHouse(id) {
+        if (confirm("Delete this structure?")) {
+            state.houses = state.houses.filter(h => h.id !== id);
+            localStorage.setItem('nobleboro-houses-v7', JSON.stringify(state.houses));
+            renderGreenhouses();
+        }
+    }
+
+    function updateNote(id, text) {
+        const h = state.houses.find(x => x.id === id);
+        if (h) {
+            h.notes = text;
+            localStorage.setItem('nobleboro-houses-v7', JSON.stringify(state.houses));
+        }
+    }
+
+    // =====================================================================
+    // PHYSICS PANEL RENDERER — Step 4 Injection
+    // =====================================================================
+    function renderPhysicsPanel(house) {
+        const el = document.getElementById(`physics-injection-${house.id}`);
+        if (!el) return;
+
+        // If no weather data yet, show loading state
+        if (!state.weather) {
+            el.innerHTML = `<div class="p-6 bg-gray-100 text-center rounded-xl border border-gray-200"><p class="font-bold text-gray-400 uppercase tracking-widest text-xs">⏳ Waiting for weather data...</p></div>`;
+            return;
+        }
+
+        const wx = state.weather;
+
+        // 1. Map checkbox crop IDs → engine IDs
+        const engineCropIds = house.crops.map(c => CROP_ID_MAP[c]).filter(Boolean);
+
+        // 2. Calculate all physics
+        const cropResult = calculateCropNeeds(engineCropIds);
+        const growthResult = house.plantDate ? getGrowthStage(house.plantDate) : null;
+        const vpdResult = calculateVPD(wx.tempF, wx.rh);
+        const windResult = calculateWindDynamics(wx.windDir, house.orientation);
+
+        // 3. Build the physics injection HTML
+        let html = '<div class="space-y-3">';
+
+        // ── ROW 1: Deadband + Growth Stage ──
+        html += '<div class="phys-grid">';
+
+        // DEADBAND CARD — Day/Night Temperature
+        if (cropResult) {
+            const isNight = new Date().getHours() >= 19 || new Date().getHours() < 7;
+            const db = cropResult.conflict ? cropResult.compromiseDeadband : cropResult.deadband;
+            const ndb = cropResult.nightConflict ? null : cropResult.nightDeadband;
+            const activeDb = isNight && ndb ? ndb : db;
+            const dbColor = cropResult.conflict ? '#f59e0b' : '#22c55e';
+            const dbTextColor = cropResult.conflict ? 'text-amber-600' : 'text-green-600';
+            const barMin = 20, barMax = 100;
+            const leftPct = Math.max(0, (activeDb.min - barMin) / (barMax - barMin) * 100);
+            const widthPct = Math.max(0, Math.min(100, (activeDb.max - barMin) / (barMax - barMin) * 100) - leftPct);
+
+            // Is current temp inside the active deadband?
+            const tempInRange = wx.tempF >= activeDb.min && wx.tempF <= activeDb.max;
+            const tempStatus = tempInRange ? '✅ In Range' : (wx.tempF < activeDb.min ? '❄️ Too Cold' : '🔥 Too Hot');
+            const periodLabel = isNight ? '🌙 Night' : '☀️ Day';
+            const nightDisplay = ndb ? `${ndb.min}–${ndb.max}°F` : '—';
+
+            html += `<div class="phys-card">
+                <div class="phys-card-header">Temperature Deadband</div>
+                <div class="phys-val ${dbTextColor}">${db.min}–${db.max}°F</div>
+                <div class="phys-sub">${cropResult.conflict ? '⚠️ Compromise range' : '✅ Safe overlap'} · Botrytis @ ${cropResult.botrytisRH}% RH</div>
+                <div style="display:flex;gap:0.5rem;margin-top:0.4rem;">
+                    <div style="flex:1;background:${isNight ? '#f3f4f6' : '#dcfce7'};border-radius:0.375rem;padding:0.35rem 0.5rem;border:1px solid ${isNight ? '#e5e7eb' : '#bbf7d0'};">
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#9ca3af;">☀️ Day</div>
+                        <div style="font-size:0.85rem;font-weight:800;color:#166534;">${db.min}–${db.max}°F</div>
+                    </div>
+                    <div style="flex:1;background:${isNight ? '#dbeafe' : '#f3f4f6'};border-radius:0.375rem;padding:0.35rem 0.5rem;border:1px solid ${isNight ? '#bfdbfe' : '#e5e7eb'};">
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#9ca3af;">🌙 Night</div>
+                        <div style="font-size:0.85rem;font-weight:800;color:#1e40af;">${nightDisplay}</div>
+                    </div>
+                </div>
+                <div class="phys-bar" style="background:#e5e7eb;">
+                    <div class="phys-bar-fill" style="background:${dbColor}; width:${widthPct}%; margin-left:${leftPct}%;"></div>
+                </div>
+                <div class="phys-sub" style="margin-top:0.35rem;">Ambient: <strong>${Math.round(wx.tempF)}°F</strong> ${periodLabel} ${tempStatus}</div>
+            </div>`;
+        } else {
+            html += `<div class="phys-card"><div class="phys-card-header">Temperature Deadband</div><div class="phys-sub">No crops selected.</div></div>`;
+        }
+
+        // GROWTH STAGE CARD
+        if (growthResult && growthResult.stage !== 'not_planted') {
+            const stageColors = { seedling: '#3b82f6', vegetative: '#22c55e', mature: '#f59e0b' };
+            const stageTextColors = { seedling: 'text-blue-600', vegetative: 'text-green-600', mature: 'text-amber-600' };
+            const stageProgress = growthResult.stage === 'seedling' ? 20 : growthResult.stage === 'vegetative' ? 55 : 90;
+
+            html += `<div class="phys-card">
+                <div class="phys-card-header">Growth Stage</div>
+                <div class="phys-val ${stageTextColors[growthResult.stage] || 'text-gray-700'}">${growthResult.stageLabel}</div>
+                <div class="phys-sub">Day ${growthResult.daysAfterPlanting} · RH boost: <strong>+${growthResult.transpirationMultiplier}%</strong></div>
+                <div class="phys-bar" style="background:#e5e7eb;">
+                    <div class="phys-bar-fill" style="background:${stageColors[growthResult.stage] || '#6b7280'}; width:${stageProgress}%;"></div>
+                </div>
+            </div>`;
+        } else if (growthResult && growthResult.stage === 'not_planted') {
+            html += `<div class="phys-card"><div class="phys-card-header">Growth Stage</div><div class="phys-val text-gray-400">Not Planted</div><div class="phys-sub">${growthResult.description}</div></div>`;
+        } else {
+            html += `<div class="phys-card"><div class="phys-card-header">Growth Stage</div><div class="phys-sub">No plant date set.</div></div>`;
+        }
+
+        html += '</div>'; // end phys-grid row 1
+
+        // ── ROW 2: VPD + Wind ──
+        html += '<div class="phys-grid">';
+
+        // VPD CARD
+        if (vpdResult) {
+            const vpdColors = { danger_wet: '#3b82f6', ideal_low: '#22c55e', ideal_high: '#22c55e', stress_mild: '#eab308', danger_dry: '#ef4444' };
+            const vpdTextColors = { danger_wet: 'text-blue-600', ideal_low: 'text-green-600', ideal_high: 'text-green-600', stress_mild: 'text-amber-600', danger_dry: 'text-red-600' };
+            const vpdPct = Math.min(100, Math.max(0, (vpdResult.vpd_kPa / 2.0) * 100));
+
+            html += `<div class="phys-card">
+                <div class="phys-card-header">Vapor Pressure Deficit</div>
+                <div class="phys-val ${vpdTextColors[vpdResult.zone]}">${vpdResult.vpd_kPa.toFixed(2)} <span style="font-size:0.65rem;font-weight:600;color:#9ca3af;">kPa</span></div>
+                <div class="phys-sub">${vpdResult.zoneLabel}</div>
+                <div class="phys-bar" style="background:linear-gradient(90deg,#3b82f6,#22c55e 25%,#22c55e 50%,#eab308 70%,#ef4444);">
+                    <div style="position:relative;height:100%;">
+                        <div style="position:absolute;top:-2px;left:${vpdPct}%;width:3px;height:10px;background:white;border-radius:2px;box-shadow:0 0 4px rgba(0,0,0,0.4);transform:translateX(-50%);"></div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // WIND CARD
+        if (windResult) {
+            const windColor = windResult.isBernoulliMode ? 'text-green-600' : 'text-amber-600';
+            const windStatus = windResult.isBernoulliMode ? '✅ Bernoulli Safe' : '⚠️ Cross-Wind';
+            const ghClass = house.orientation === 'EW' ? 'wind-gh-mini ew' : 'wind-gh-mini';
+
+            html += `<div class="phys-card">
+                <div class="phys-card-header">Wind & Ventilation</div>
+                <div style="display:flex;gap:0.75rem;align-items:center;">
+                    <div class="wind-compass-mini">
+                        <span class="wc-label wc-n">N</span>
+                        <span class="wc-label wc-s">S</span>
+                        <span class="wc-label wc-e">E</span>
+                        <span class="wc-label wc-w">W</span>
+                        <div class="wind-arrow-mini" style="transform:translate(-50%,-100%) rotate(${wx.windDir + 180}deg);"></div>
+                        <div class="${ghClass}"></div>
+                    </div>
+                    <div>
+                        <div class="phys-val ${windColor}" style="font-size:1rem;">${windStatus}</div>
+                        <div class="phys-sub">Wind from ${windResult.windFrom} (${Math.round(wx.windMph)} mph)</div>
+                        <div class="phys-sub">${house.orientation} ridge · ${windResult.sidewallFaces.join('/')} walls</div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        html += '</div>'; // end phys-grid row 2
+
+        // ── ALERTS ──
+        // Crop deadband warnings
+        if (cropResult && cropResult.warnings.length > 0) {
+            cropResult.warnings.forEach(w => {
+                const cls = w.includes('CONFLICT') ? 'phys-alert-danger' : w.includes('COMPROMISE') ? 'phys-alert-warn' : 'phys-alert-safe';
+                html += `<div class="phys-alert ${cls}">${w}</div>`;
+            });
+        }
+
+        // VPD action alert
+        if (vpdResult && (vpdResult.zone === 'danger_wet' || vpdResult.zone === 'danger_dry')) {
+            const cls = vpdResult.zone === 'danger_wet' ? 'phys-alert-info' : 'phys-alert-danger';
+            html += `<div class="phys-alert ${cls}">💧 ${vpdResult.recommendation}</div>`;
+        }
+
+        // Wind instructions (first instruction only, to keep compact)
+        if (windResult && windResult.ventInstructions.length > 0) {
+            const wCls = windResult.isBernoulliMode ? 'phys-alert-safe' : 'phys-alert-warn';
+            html += `<div class="phys-alert ${wCls}">🌬️ ${windResult.ventInstructions[0]}</div>`;
+        }
+
+        // Transpiration + Botrytis cross-check
+        if (growthResult && cropResult && state.weather) {
+            const estimatedRH = wx.rh + growthResult.transpirationMultiplier;
+            if (estimatedRH >= cropResult.botrytisRH) {
+                html += `<div class="phys-alert phys-alert-danger">🍄 BOTRYTIS RISK: Ambient ${Math.round(wx.rh)}% + transpiration +${growthResult.transpirationMultiplier}% = ~${Math.round(estimatedRH)}% RH. Exceeds threshold of ${cropResult.botrytisRH}%. Vent NOW.</div>`;
+            }
+        }
+
+        html += '</div>'; // end wrapper
+
+        el.innerHTML = html;
+    }
+
+    function injectAllPhysics() {
+        state.houses.forEach(house => renderPhysicsPanel(house));
+    }
+
+    // =====================================================================
+    // GREENHOUSE CARD RENDERER
+    // =====================================================================
+    function renderGreenhouses() {
+        const container = document.getElementById('greenhouse-container');
+        container.innerHTML = state.houses.length === 0 
+            ? `<div class="text-center p-8 bg-white rounded-xl border border-gray-100 shadow-sm"><p class="text-gray-400 font-medium">No structures found. Tap 'Add Structure' to begin.</p></div>` 
+            : '';
+
+        state.houses.forEach((house, index) => {
+            const cropIcons = house.crops.map(c => {
+                const profile = CROP_PROFILES[CROP_ID_MAP[c]];
+                return profile ? profile.icon : '🌱';
+            }).join(' ');
+
+            container.innerHTML += `
+            <details class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4" ${index === 0 ? 'open' : ''}>
+                <summary class="p-4 sm:p-5 bg-white hover:bg-gray-50 flex justify-between items-center transition-colors">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 class="font-bold text-lg text-gray-900">${house.name}</h3>
+                            <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-bold uppercase tracking-wider">${house.orientation}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 font-medium">${cropIcons} · Planted: ${house.plantDate || '—'} · Crops: ${house.crops.length}</p>
+                    </div>
+                    <svg class="w-5 h-5 text-gray-400 collapse-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </summary>
+                <div class="p-4 sm:p-5 bg-gray-50 border-t border-gray-100">
+                    
+                    <div id="physics-injection-${house.id}" class="mb-4">
+                        <div class="p-6 bg-gray-100 text-center rounded-xl border border-gray-200">
+                            <p class="font-bold text-gray-400 uppercase tracking-widest text-xs">⏳ Loading physics...</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                        <div class="p-3 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Field Notes</span>
+                            <div class="flex gap-3">
+                                <button onclick="toggleModal('${house.id}')" class="text-[10px] font-bold text-farm-green uppercase hover:underline">Edit</button>
+                                <button onclick="deleteHouse('${house.id}')" class="text-[10px] font-bold text-red-500 uppercase hover:underline">Delete</button>
+                            </div>
+                        </div>
+                        <textarea oninput="updateNote('${house.id}', this.value)" rows="2" class="w-full p-3 text-sm text-gray-700 resize-none outline-none placeholder-gray-300 font-medium" placeholder="Record pests, watering, observations...">${house.notes || ''}</textarea>
+                    </div>
+                </div>
+            </details>`;
+        });
+
+        // Inject physics after DOM is built
+        injectAllPhysics();
+    }
+
+    // =====================================================================
+    // BOOT
+    // =====================================================================
+    renderGreenhouses();
+    fetchWeather();
+    setInterval(fetchWeather, 5 * 60 * 1000); // Refresh every 5 minutes
+
+    console.log(
+        '%c 🌿 Greenhouse Command — Physics Engine Active ',
+        'background:#0c6623;color:#5dbb77;font-size:13px;font-weight:bold;padding:4px 10px;border-radius:4px;'
+    );
+    </script>
+</body>
+</html>
