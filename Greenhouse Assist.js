@@ -2120,7 +2120,7 @@ export function initFirebase() {
         }
     });
 
-    console.log(
+    devLog(
         '%c 🔥 Firebase Initialized — Auth + Firestore ready ',
         'background:#1a73e8;color:white;font-size:11px;font-weight:bold;' +
         'padding:3px 8px;border-radius:3px;'
@@ -2298,7 +2298,7 @@ export const state = {
  * @example
  *   try {
  *     const user = await loginUser('grower@example.com', 'S3cur3P@ss');
- *     console.log('Logged in as:', user.email);
+ *     devLog('Logged in as:', user.email);
  *   } catch (err) {
  *     console.error('Login failed:', err.message);
  *   }
@@ -2321,7 +2321,7 @@ export async function loginUser(email, password) {
     try {
         const credential = await auth.signInWithEmailAndPassword(email, password);
 
-        console.log(
+        devLog(
             `%c ✅ Authenticated: ${credential.user.email} `,
             'background:#16a34a;color:white;font-size:11px;font-weight:bold;' +
             'padding:3px 8px;border-radius:3px;'
@@ -2381,7 +2381,7 @@ export async function logoutUser() {
     try {
         await auth.signOut();
 
-        console.log(
+        devLog(
             '%c 🚪 Signed out ',
             'background:#64748b;color:white;font-size:11px;font-weight:bold;' +
             'padding:3px 8px;border-radius:3px;'
@@ -2445,7 +2445,7 @@ export function setupAuthObserver(onReady) {
 
             state.user = user;
 
-            console.log(
+            devLog(
                 `%c 👤 Auth state: ${user.email} (uid: ${user.uid}) `,
                 'background:#1e40af;color:white;font-size:11px;font-weight:bold;' +
                 'padding:3px 8px;border-radius:3px;'
@@ -2497,7 +2497,7 @@ export function setupAuthObserver(onReady) {
                         state.houses = data.houses;
                     }
 
-                    console.log(
+                    devLog(
                         `[auth] Loaded ${state.houses.length} structures from Firestore. ` +
                         `Subscription: ${subStatus}.`
                     );
@@ -2508,7 +2508,7 @@ export function setupAuthObserver(onReady) {
                     //   We create a skeleton document with defaults so the user
                     //   has something to build on.
 
-                    console.log('[auth] New user — creating initial Firestore document.');
+                    devLog('[auth] New user — creating initial Firestore document.');
 
                     state.isReadOnly = false;
                     state.houses = [];
@@ -2550,7 +2550,7 @@ export function setupAuthObserver(onReady) {
                 apiKeys: {}
             };
 
-            console.log(
+            devLog(
                 '%c 👤 Auth state: signed out ',
                 'background:#94a3b8;color:white;font-size:11px;font-weight:bold;' +
                 'padding:3px 8px;border-radius:3px;'
@@ -2693,7 +2693,7 @@ export async function syncFarmToCloud(currentState) {
             last_sync: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
-        console.log(
+        devLog(
             `%c ☁️ Synced ${sanitizedHouses.length} structures to Firestore `,
             'background:#1a73e8;color:white;font-size:11px;font-weight:bold;' +
             'padding:3px 8px;border-radius:3px;'
@@ -2951,7 +2951,7 @@ export function exportFarmDataToCSV(currentState) {
             URL.revokeObjectURL(url);
         }, 100);
 
-        console.log(
+        devLog(
             `%c 📦 Data exported: PracticalFarmTools_Archive.csv ` +
             `(${houses.length} structures, ${csvContent.length} bytes) `,
             'background:#16a34a;color:white;font-size:11px;font-weight:bold;' +
@@ -2962,7 +2962,7 @@ export function exportFarmDataToCSV(currentState) {
         // If browser download fails (e.g., in a headless environment),
         // the CSV string is still returned for programmatic use.
         console.error('[export] Browser download failed:', error.message);
-        console.log('[export] CSV content returned as string — use programmatically.');
+        devLog('[export] CSV content returned as string — use programmatically.');
     }
 
     return csvContent;
@@ -3690,7 +3690,7 @@ const nwsGridCache = new Map();
  * @example
  *   const wx = await fetchNWSWeather(44.0784, -69.4892);
  *   if (wx.success) {
- *     console.log(`Current: ${wx.current.tempF}°F, ${wx.current.rh}% RH`);
+ *     devLog(`Current: ${wx.current.tempF}°F, ${wx.current.rh}% RH`);
  *     const dli = calculateEstimatedDLI(44.0784, dayOfYear, wx.skyCoverArray);
  *   }
  */
@@ -3894,7 +3894,7 @@ export async function fetchNWSWeather(lat, lon) {
             shortForecast: first.shortForecast
         } : null;
 
-        console.log(
+        devLog(
             `%c 🌤️ NWS Forecast: ${hourly.length} hours from ${gridMeta.office} ` +
             `(${roundedLat}, ${roundedLon}) `,
             'background:#0369a1;color:white;font-size:11px;font-weight:bold;' +
@@ -4506,7 +4506,7 @@ export function calculateTrueVPD(airTempF, rh, solarW, windMph, isTranspiring) {
  *   const sensor = await getLiveSensorData(house);
  *   if (sensor.success) {
  *     const vpd = calculateVPD(sensor.tempF, sensor.rh);
- *     console.log(`Sensor VPD: ${vpd.vpd_kPa.toFixed(2)} kPa`);
+ *     devLog(`Sensor VPD: ${vpd.vpd_kPa.toFixed(2)} kPa`);
  *   }
  */
 export async function getLiveSensorData(house) {
@@ -4552,7 +4552,7 @@ export async function getLiveSensorData(house) {
     const mockTemp = parseFloat((baseTemp + variation()).toFixed(1));
     const mockRH = Math.round(Math.min(99, Math.max(30, baseRH + variation() * 3)));
 
-    console.log(
+    devLog(
         `%c 📡 Sensor [${config.brand}/${config.deviceId || 'unknown'}] ` +
         `→ MOCK: ${mockTemp}°F / ${mockRH}% RH `,
         'background:#7c3aed;color:white;font-size:11px;font-weight:bold;' +
@@ -5153,7 +5153,7 @@ export async function getIntelligentHouseRecommendation(house, weather, appState
     //  STEP 8: ASSEMBLE FINAL OUTPUT
     // ═══════════════════════════════════════════════════════════════════════
 
-    console.log(
+    devLog(
         `%c 🧠 Intelligent Rec: ${house.name || house.id} | ` +
         `${telemetryStatus} | TrueVPD: ${activeVPD.toFixed(2)} kPa | ` +
         `DLI: ${dli.dli_mol} mol | ${cropType} | ${climateKey} | ` +
@@ -5247,7 +5247,7 @@ if (typeof window !== 'undefined') {
         getIntelligentHouseRecommendation
     };
 
-    console.log(
+    devLog(
         '%c 🌿 Greenhouse OS Engine loaded → window.app (' +
         `${Object.keys(window.app).length} exports) `,
         'background:#166534;color:#bbf7d0;font-size:12px;font-weight:bold;' +
