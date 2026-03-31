@@ -2035,6 +2035,15 @@ export function processFarmData(housesArray, weatherData) {
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ── Production Logging Guard ────────────────────────────────────────────────
+//
+// Set DEV_MODE = false before any public deployment.
+// When false, all styled console.log status messages are suppressed.
+// console.error and console.warn for actual failures remain active always.
+//
+const DEV_MODE = false;
+const devLog = (...args) => { if (DEV_MODE) console.log(...args); };
+
 /**
  * Firebase project configuration.
  * Replace this placeholder with your actual Firebase project keys.
@@ -5204,7 +5213,9 @@ if (typeof window !== 'undefined') {
         processFarmData,
 
         // ── Section 9-13: Firebase SaaS ──
-        firebaseConfig,
+        // NOTE: firebaseConfig intentionally NOT exported here.
+        // It is only used internally by initFirebase(). Exposing it on
+        // window.app would make targeted API abuse easier for anyone with devtools.
         initFirebase,
         state,
         loginUser,

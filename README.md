@@ -2,7 +2,7 @@
 
 Sensor-less thermodynamic and biology engine for greenhouse management.
 
-**Location Baseline:** Spear Farm — Nobleboro, Maine (USDA Zone 5b)
+**Location Baseline:** USDA Zone 5b — coastal Maine (44.08°N)
 
 ## Features
 
