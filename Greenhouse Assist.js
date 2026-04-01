@@ -4528,27 +4528,195 @@ export async function getLiveSensorData(house) {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    //  PRODUCTION DISPATCH (stub — to be implemented per-brand)
+    //  GOVEE — Real API Integration via /api/govee proxy
+    // ═══════════════════════════════════════════════════════════════════
+    if (config.brand === 'govee') {
+        try {
+            // The Govee API key is stored in the user's Firestore state
+            const goveeKey = window.app?.state?.globalSettings?.apiKeys?.govee;
+            if (!goveeKey) {
+                return {
+                    success: false, source: 'govee', tempF: null, rh: null,
+                    timestamp: Date.now(), deviceId: config.deviceId || '',
+                    error: 'Govee API key not found. Add it in Settings → Sensor API Keys.'
+                };
+            }
+
+            if (!config.deviceId) {
+                return {
+                    success: false, source: 'govee', tempF: null, rh: null,
+                    timestamp: Date.now(), deviceId: '',
+                    error: 'No Device ID set. Edit this structure and enter your Govee device MAC:Model (e.g., A4:C1:38:XX:XX:XX:H5075).'
+                };
+            }
+
+            // deviceId format: "MAC:MODEL" e.g. "A4:C1:38:AB:CD:EF:H5075"
+            // or just MAC if model is included after the last colon group
+            let mac = config.deviceId;
+            let model = '';
+
+            // Try to split MAC:MODEL — Govee MACs are always XX:XX:XX:XX:XX:XX format
+            // Model is the remaining part after the 6-octet MAC
+            const parts = config.deviceId.split(':');
+            if (parts.length > 6) {
+                mac = parts.slice(0, 6).join(':');
+                model = parts.slice(6).join(':');
+            } else if (parts.length === 6) {
+                // Just MAC, no model — we'll try to auto-detect
+                mac = config.deviceId;
+            }
+
+            // If no model was parsed from deviceId, try fetching device list to find it
+            if (!model) {
+                const listRes = await fetch(`/api/govee?action=devices`, {
+                    headers: { 'x-govee-key': goveeKey }
+                });
+                if (listRes.ok) {
+                    const listData = await listRes.json();
+                    const devices = listData?.data?.devices || [];
+                    const match = devices.find(d =>
+                        d.device && d.device.toUpperCase() === mac.toUpperCase()
+                    );
+                    if (match) {
+                        model = match.model || match.sku || '';
+                    }
+                }
+                if (!model) {
+                    return {
+                        success: false, source: 'govee', tempF: null, rh: null,
+                        timestamp: Date.now(), deviceId: config.deviceId,
+                        error: `Could not find model for device ${mac}. Format Device ID as MAC:MODEL (e.g., A4:C1:38:AB:CD:EF:H5075).`
+                    };
+                }
+            }
+
+            // Fetch device state
+            const stateRes = await fetch(
+                `/api/govee?action=state&device=${encodeURIComponent(mac)}&model=${encodeURIComponent(model)}`,
+                { headers: { 'x-govee-key': goveeKey } }
+            );
+
+            if (!stateRes.ok) {
+                const errData = await stateRes.json().catch(() => ({}));
+                return {
+                    success: false, source: 'govee', tempF: null, rh: null,
+                    timestamp: Date.now(), deviceId: config.deviceId,
+                    error: `Govee API error ${stateRes.status}: ${errData.message || errData.error || 'Unknown error'}`
+                };
+            }
+
+            const stateData = await stateRes.json();
+            const props = stateData?.data?.properties || [];
+
+            // Govee returns temperature in raw format (value / 100 in Celsius for some models,
+            // or direct Fahrenheit for others) and humidity as a percentage.
+            let tempRaw = null;
+            let humRaw = null;
+
+            for (const prop of props) {
+                if (prop.tem !== undefined) {
+                    // tem object: { tem: value, range: {min, max} } — value is °F × 100 or °C
+                    tempRaw = prop.tem;
+                } else if (prop.hum !== undefined) {
+                    humRaw = prop.hum;
+                }
+                // Some models use 'online' property
+            }
+
+            // Parse temperature — Govee H5075/H5074 return tem as raw °C × 1000
+            // or °F directly. We detect by magnitude.
+            let tempF = null;
+            if (tempRaw !== null && tempRaw !== undefined) {
+                if (typeof tempRaw === 'object' && tempRaw.tem !== undefined) {
+                    tempRaw = tempRaw.tem;
+                }
+                if (typeof tempRaw === 'number') {
+                    if (tempRaw > 1000) {
+                        // Raw format: value / 100 gives Fahrenheit (some models)
+                        // or value / 1000 gives Celsius (H5075)
+                        // Heuristic: if > 5000, it's likely °F × 100; if 1000-5000, °C × 100
+                        if (tempRaw > 5000) {
+                            tempF = tempRaw / 100; // Already Fahrenheit × 100
+                        } else {
+                            const tempC = tempRaw / 100;
+                            tempF = (tempC * 9 / 5) + 32;
+                        }
+                    } else if (tempRaw > 200) {
+                        // Likely °C × 10
+                        const tempC = tempRaw / 10;
+                        tempF = (tempC * 9 / 5) + 32;
+                    } else if (tempRaw < 60) {
+                        // Likely raw Celsius
+                        tempF = (tempRaw * 9 / 5) + 32;
+                    } else {
+                        // Likely already Fahrenheit
+                        tempF = tempRaw;
+                    }
+                    tempF = parseFloat(tempF.toFixed(1));
+                }
+            }
+
+            // Parse humidity
+            let rh = null;
+            if (humRaw !== null && humRaw !== undefined) {
+                if (typeof humRaw === 'object' && humRaw.hum !== undefined) {
+                    humRaw = humRaw.hum;
+                }
+                if (typeof humRaw === 'number') {
+                    // Some models return humidity × 100
+                    rh = humRaw > 100 ? humRaw / 100 : humRaw;
+                    rh = Math.round(rh);
+                }
+            }
+
+            if (tempF === null && rh === null) {
+                return {
+                    success: false, source: 'govee', tempF: null, rh: null,
+                    timestamp: Date.now(), deviceId: config.deviceId,
+                    error: 'Govee device responded but no temperature/humidity data found. ' +
+                           'This device may not support cloud API readings (Bluetooth-only models).'
+                };
+            }
+
+            devLog(
+                `%c 📡 Govee LIVE [${mac}/${model}] → ${tempF}°F / ${rh}% RH `,
+                'background:#7c3aed;color:white;font-size:11px;font-weight:bold;' +
+                'padding:3px 8px;border-radius:3px;'
+            );
+
+            return {
+                success: true,
+                source: 'govee',
+                tempF,
+                rh,
+                timestamp: Date.now(),
+                deviceId: config.deviceId,
+                error: null
+            };
+
+        } catch (err) {
+            console.error('[sensor] Govee fetch failed:', err.message);
+            return {
+                success: false, source: 'govee', tempF: null, rh: null,
+                timestamp: Date.now(), deviceId: config.deviceId || '',
+                error: `Govee connection failed: ${err.message}. Check your internet connection.`
+            };
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  OTHER BRANDS — Mock data (to be implemented)
     // ═══════════════════════════════════════════════════════════════════
     //
-    //  When a real sensor brand is configured but we don't have the
-    //  production API integration yet, return mock data that simulates
-    //  realistic sensor readings. This keeps the engine testable.
-    //
     //  TODO: Implement real API calls for each brand:
-    //    case 'davis':    → Davis WeatherLink v2 API
-    //    case 'ecowitt':  → Ecowitt Open API v3
-    //    case 'sensecap': → SenseCap OpenAPI
-
-    // ── Mock data for development ──
-    //   Simulates realistic interior conditions for a heated greenhouse
-    //   in Zone 5b spring (March-May). Adds small random variation to
-    //   prevent the UI from looking "frozen" during development.
+    //    case 'sensorpush': → SensorPush Cloud API
+    //    case 'davis':      → Davis WeatherLink v2 API
+    //    case 'ecowitt':    → Ecowitt Open API v3
+    //    case 'sensecap':   → SenseCap OpenAPI
 
     const baseTemp = 75;
     const baseRH = 65;
-    const variation = () => (Math.random() - 0.5) * 4; // ±2°F jitter
-
+    const variation = () => (Math.random() - 0.5) * 4;
     const mockTemp = parseFloat((baseTemp + variation()).toFixed(1));
     const mockRH = Math.round(Math.min(99, Math.max(30, baseRH + variation() * 3)));
 
