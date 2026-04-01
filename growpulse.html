@@ -3,8 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Practical Farm Tools — Greenhouse OS. Professional sensor-less greenhouse management for commercial growers.">
-<title>Practical Farm Tools — Greenhouse OS</title>
+<meta name="description" content="Practical Farm Tools — GrowPulse. Professional sensor-less greenhouse management for commercial growers.">
+<title>Practical Farm Tools — GrowPulse</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#047857">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GrowPulse">
+<link rel="apple-touch-icon" href="icon-512.png">
 
 <!-- Firebase v8 CDNs -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -49,6 +57,17 @@
   @keyframes undo-countdown{from{width:100%}to{width:0%}}
   #undo-toast{transition:transform .3s ease, opacity .3s ease}
   #undo-toast.hidden{transform:translateY(100px);opacity:0}
+  /* Tile grid */
+  .house-tile{transition:box-shadow .15s ease,transform .1s ease;cursor:pointer}
+  .house-tile:active{transform:scale(0.97)}
+  .house-tile:focus-visible{outline:2px solid #047857;outline-offset:2px}
+  /* 1-column fallback for very narrow screens */
+  @media(max-width:359px){#houses-container{grid-template-columns:1fr!important}}
+  /* Line clamp for tile alert text */
+  .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  /* Detail modal slide-up */
+  #house-detail-modal{transition:transform .3s cubic-bezier(.2,1,.4,1),opacity .25s ease}
+  #house-detail-modal.hidden{transform:translateY(60px);opacity:0;pointer-events:none}
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -64,7 +83,7 @@
         <i class="fa-solid fa-seedling text-3xl text-white"></i>
       </div>
       <h1 class="text-2xl font-bold text-slate-900">Practical Farm Tools</h1>
-      <p class="text-sm text-slate-500 mt-1">Greenhouse OS — Commercial Edition</p>
+      <p class="text-sm text-slate-500 mt-1">GrowPulse — Commercial Edition</p>
     </div>
 
     <div id="login-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
@@ -84,7 +103,7 @@
       </div>
       <button id="login-btn" type="button"
         class="w-full py-4 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-semibold rounded-xl text-base transition-colors min-h-[52px]">
-        Sign In to Greenhouse OS
+        Sign In to GrowPulse
       </button>
     </form>
 
@@ -97,7 +116,7 @@
       Secure login powered by Firebase Auth.<br>Your farm data is encrypted in transit.
     </p>
     <p class="text-center text-xs text-slate-400 mt-3">
-      New here? <a href="mailto:kyle@practicalfarmtools.com?subject=Greenhouse%20OS%20Access%20Request" class="text-emerald-600 hover:text-emerald-700 font-medium">Request Access →</a>
+      New here? <a href="mailto:kyle@practicalfarmtools.com?subject=GrowPulse%20Access%20Request" class="text-emerald-600 hover:text-emerald-700 font-medium">Request Access →</a>
     </p>
   </div>
 </div>
@@ -120,7 +139,7 @@
       <i class="fa-solid fa-seedling text-xl"></i>
       <div>
         <div class="font-bold text-base leading-tight">Practical Farm Tools</div>
-        <div class="text-emerald-200 text-xs">Greenhouse OS</div>
+        <div class="text-emerald-200 text-xs">GrowPulse</div>
       </div>
     </div>
     <div class="flex items-center gap-3">
@@ -146,7 +165,7 @@
       <div class="px-4 pb-5 space-y-5 border-t border-slate-100 pt-4">
 
         <!-- Quick Help -->
-        <a href="greenhouse-os-walkthrough.html" target="_blank" class="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors no-underline">
+        <a href="growpulse-walkthrough.html" target="_blank" class="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors no-underline">
           <i class="fa-solid fa-book-open text-blue-600 text-lg"></i>
           <div>
             <div class="font-semibold text-blue-800 text-sm">User Guide & Walkthrough</div>
@@ -182,9 +201,9 @@
         <div>
           <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">🔑 Sensor API Keys <span class="text-slate-400 font-normal normal-case">(optional — app works without sensors)</span></label>
           <div class="space-y-2">
-            <input id="key-govee" type="text" autocomplete="off" placeholder="Govee API Key"
+            <input id="key-govee" type="password" autocomplete="off" placeholder="Govee API Key"
               class="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[48px]">
-            <input id="key-sensorpush" type="text" autocomplete="off" placeholder="SensorPush API Key"
+            <input id="key-sensorpush" type="password" autocomplete="off" placeholder="SensorPush API Key"
               class="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[48px]">
           </div>
           <p class="text-xs text-slate-400 mt-1">Enter your key here, then assign devices to specific greenhouses below</p>
@@ -231,13 +250,13 @@
       <span>Weather data unavailable — dashboard showing estimated defaults. Check your internet connection.</span>
     </div>
 
-    <!-- ═══ HOUSE CARDS CONTAINER ═══ -->
-    <div id="houses-container" class="space-y-4" aria-live="polite"></div>
+    <!-- ═══ HOUSE TILE GRID ═══ -->
+    <div id="houses-container" class="grid grid-cols-2 gap-3" aria-live="polite"></div>
 
     <!-- Empty state -->
     <div id="empty-state" class="text-center py-12 hidden">
       <i class="fa-solid fa-warehouse text-5xl text-slate-200 mb-4"></i>
-      <h2 class="text-lg font-bold text-slate-600 mb-2">Welcome to Greenhouse OS!</h2>
+      <h2 class="text-lg font-bold text-slate-600 mb-2">Welcome to GrowPulse!</h2>
       <p class="text-slate-400 font-medium mb-1">Your command center is ready.</p>
       <p class="text-slate-400 text-sm">Tap <strong>"Add Greenhouse Structure"</strong> above to configure your first house and start receiving real-time alerts.</p>
     </div>
@@ -248,7 +267,7 @@
 <!-- ═══════════════════════════════════════
      ADD/EDIT HOUSE MODAL
 ═══════════════════════════════════════ -->
-<div id="house-modal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
+<div id="house-modal" class="hidden fixed inset-0 z-[55] bg-black/60 flex items-end justify-center">
   <div class="bg-white w-full max-w-md rounded-t-2xl max-h-[90dvh] overflow-y-auto">
     <div class="sticky top-0 bg-white border-b border-slate-100 px-4 py-4 flex items-center justify-between">
       <h2 id="modal-title" class="font-bold text-slate-800 text-lg">Add Structure</h2>
@@ -366,6 +385,36 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════
+     HOUSE DETAIL MODAL (tap-to-expand)
+═══════════════════════════════════════ -->
+<div id="house-detail-modal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
+  <div class="bg-white w-full max-w-md rounded-t-2xl max-h-[92dvh] overflow-y-auto">
+
+    <!-- Sticky header -->
+    <div class="sticky top-0 bg-white border-b border-slate-100 px-4 py-4 flex items-center justify-between z-10">
+      <div class="min-w-0">
+        <h2 id="detail-modal-title" class="font-bold text-slate-800 text-lg leading-tight truncate">—</h2>
+        <p id="detail-modal-subtitle" class="text-xs text-slate-400 mt-0.5">—</p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="detail-edit-btn" aria-label="Edit structure"
+          class="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-sm rounded-xl min-h-[40px] transition-colors">
+          <i class="fa-solid fa-pen-to-square text-sm"></i>Edit
+        </button>
+        <button id="detail-close-btn" aria-label="Close"
+          class="p-2 text-slate-500 hover:text-slate-800 min-h-[44px] min-w-[44px] flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Dynamic body — populated by JS -->
+    <div id="detail-modal-body" class="pb-6"></div>
+
+  </div>
+</div>
+
 <!-- Undo Delete Toast -->
 <div id="undo-toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-slate-800 text-white px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 max-w-sm w-[calc(100%-2rem)]">
   <span id="undo-toast-msg" class="text-sm flex-1"></span>
@@ -376,9 +425,7 @@
 <!-- UI Controller: static import ensures engine is ready before any code runs -->
 
 <script type="module">
-import { CROP_PROFILES } from './Greenhouse Assist.js';
-
-'use strict';
+import { CROP_PROFILES } from './growpulse-engine.js';
 
 // ── Globals ─────────────────────────────────────────────────────────────────
 let currentWeather = null;   // Last NWS fetch result
@@ -398,7 +445,7 @@ const housesContainer = $('houses-container');
 const emptyState      = $('empty-state');
 
 // ── Offline Cache Helpers ────────────────────────────────────────────────────
-const CACHE_KEY = 'gh_farm_cache_v1';
+const CACHE_KEY = 'growpulse_cache_v1';
 function saveOfflineCache(state, weather) {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify({
@@ -454,6 +501,15 @@ window.addEventListener('offline', () => {
     $('modal-delete-btn').addEventListener('click', handleModalDelete);
     $('house-modal').addEventListener('click', e => { if (e.target === $('house-modal')) closeModal(); });
     $('undo-btn').addEventListener('click', handleUndoDelete);
+
+    // Detail modal wiring
+    $('detail-close-btn').addEventListener('click', closeDetailModal);
+    $('house-detail-modal').addEventListener('click', e => { if (e.target === $('house-detail-modal')) closeDetailModal(); });
+    $('detail-edit-btn').addEventListener('click', () => {
+      const id = detailHouseId;
+      closeDetailModal();
+      openModal(id);
+    });
 
     // Sensor brand → show/hide device ID field
     $('h-sensorbrand').addEventListener('change', e => {
@@ -522,7 +578,7 @@ window.addEventListener('offline', () => {
     function showError(msg) {
       errEl.textContent = msg || 'Login failed.';
       errEl.classList.remove('hidden');
-      btn.textContent = 'Sign In to Greenhouse OS';
+      btn.textContent = 'Sign In to GrowPulse';
       btn.disabled = false;
     }
 
@@ -555,7 +611,7 @@ window.addEventListener('offline', () => {
   }
 
   async function handleLogout() {
-    if (!confirm('Sign out of Greenhouse OS?')) return;
+    if (!confirm('Sign out of GrowPulse?')) return;
     await window.app.logoutUser();
     showLoginView();
   }
@@ -606,7 +662,7 @@ window.addEventListener('offline', () => {
   function showLoginView() {
     loginView.classList.remove('hidden');
     appView.classList.add('hidden');
-    $('login-btn').textContent = 'Sign In to Greenhouse OS';
+    $('login-btn').textContent = 'Sign In to GrowPulse';
     $('login-btn').disabled = false;
   }
 
@@ -703,10 +759,14 @@ window.addEventListener('offline', () => {
     const houses = A.state.houses || [];
     if (houses.length > 0) {
       housesContainer.innerHTML = houses.map(h => `
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden p-4">
-          <div class="h-5 w-2/3 bg-slate-200 rounded skeleton-pulse mb-3"></div>
-          <div class="h-10 bg-slate-100 rounded-lg skeleton-pulse mb-3"></div>
-          <div class="grid grid-cols-3 gap-3"><div class="h-16 bg-slate-100 rounded skeleton-pulse"></div><div class="h-16 bg-slate-100 rounded skeleton-pulse"></div><div class="h-16 bg-slate-100 rounded skeleton-pulse"></div></div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden p-3 min-h-[150px]">
+          <div class="h-4 w-3/4 bg-slate-200 rounded skeleton-pulse mb-2"></div>
+          <div class="h-3 w-1/2 bg-slate-100 rounded skeleton-pulse mb-3"></div>
+          <div class="flex gap-3 mb-3">
+            <div class="h-10 flex-1 bg-slate-100 rounded skeleton-pulse"></div>
+            <div class="h-10 flex-1 bg-slate-100 rounded skeleton-pulse"></div>
+          </div>
+          <div class="h-8 bg-slate-100 rounded skeleton-pulse"></div>
         </div>`).join('');
     }
 
@@ -726,6 +786,8 @@ window.addEventListener('offline', () => {
 
     $('refresh-btn').innerHTML = '<i class="fa-solid fa-rotate-right mr-2"></i>🌡 Refresh Weather & Alerts';
 
+    // Close detail modal if open — it would show stale data after refresh
+    closeDetailModal();
     renderHouses();
   }
 
@@ -745,43 +807,149 @@ window.addEventListener('offline', () => {
       return;
     }
     emptyState.classList.add('hidden');
-    houses.forEach(house => renderHouseCard(house));
+    houses.forEach(house => renderHouseTile(house));
   }
 
-  async function renderHouseCard(house) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER HOUSE TILE (compact grid tile)
+  // ─────────────────────────────────────────────────────────────────────────
+  async function renderHouseTile(house) {
     const A = window.app;
     const wx = currentWeather?.current || { tempF: 55, rh: 70, windMph: 5, windDir: 180, skyCover: 50 };
 
     // Get intelligent recommendation
     const intel = await A.getIntelligentHouseRecommendation(house, wx, A.state);
 
-    const card = document.createElement('div');
-    card.className = 'bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden';
-    card.dataset.houseId = house.id;
-
     // ── Telemetry badge ──
+    const isLive = intel.telemetryStatus === 'live';
+    const weatherTime = lastWeatherFetchTime
+      ? lastWeatherFetchTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : null;
+    const badgeText = isLive ? '🟢 Live' : weatherTime ? `🦅 ${weatherTime}` : '🦅 NWS';
+    const badgeClass = isLive ? 'bg-emerald-500' : 'bg-sky-500';
+
+    // ── VPD ──
+    const vpd = intel.trueVpd?.trueVPD_kPa ?? 0;
+    let vpdClass = 'vpd-ok';
+    let vpdLabel = 'Optimal';
+    if (vpd < 0.2)       { vpdClass = 'vpd-critical'; vpdLabel = 'DANGER'; }
+    else if (vpd < 0.43) { vpdClass = 'vpd-warning';  vpdLabel = 'Low'; }
+    else if (vpd > 2.0)  { vpdClass = 'vpd-mite';     vpdLabel = 'Mite Risk'; }
+    else if (vpd > 1.6)  { vpdClass = 'vpd-ok';        vpdLabel = 'High'; }
+
+    // ── Priority / alert ──
+    const topAlert = intel.rec?.alerts?.[0];
+    const noCropsConfigured = !house.crops?.length;
+    const effectivePriority = noCropsConfigured ? 'setup' : (intel.rec?.priority || 'ok');
+    const tileAccent = {
+      critical: 'border-l-red-500',
+      warning:  'border-l-amber-400',
+      advisory: 'border-l-blue-400',
+      ok:       'border-l-emerald-500',
+      setup:    'border-l-slate-300'
+    }[effectivePriority] || 'border-l-slate-300';
+    const alertBg = {
+      critical: 'bg-red-50 text-red-800',
+      warning:  'bg-amber-50 text-amber-800',
+      advisory: 'bg-blue-50 text-blue-800',
+      ok:       'bg-emerald-50 text-emerald-800',
+      setup:    'bg-slate-100 text-slate-600'
+    }[effectivePriority] || 'bg-slate-100 text-slate-600';
+    const bannerIcon = noCropsConfigured ? 'ℹ️' : (topAlert?.icon || '✅');
+    const bannerMsg  = noCropsConfigured
+      ? 'Tap to configure crops.'
+      : (topAlert?.msg || 'All systems nominal.').replace('(undefined)', '').replace(/\s+/g,' ').trim();
+
+    // ── Interior temp ──
+    const interiorTemp = intel.rec?.estTemp ?? wx.tempF;
+
+    // ── Build tile ──
+    const tile = document.createElement('div');
+    tile.className = `house-tile bg-white rounded-2xl shadow-sm border border-slate-100 border-l-4 ${tileAccent} overflow-hidden min-h-[150px]`;
+    tile.dataset.houseId = house.id;
+    tile.setAttribute('role', 'button');
+    tile.setAttribute('tabindex', '0');
+    tile.setAttribute('aria-label', `Open ${house.name || 'greenhouse'} dashboard`);
+
+    tile.innerHTML = `
+      <!-- Header -->
+      <div class="px-3 pt-3 pb-1 flex items-start justify-between gap-1">
+        <div class="min-w-0">
+          <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">${house.name || 'Unnamed'}</h3>
+          <p class="text-[11px] text-slate-400 truncate">${house.width || 30}×${house.length || 96}ft · ${house.glazing || ''}</p>
+        </div>
+        <span class="${badgeClass} text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">${badgeText}</span>
+      </div>
+
+      <!-- Metrics row -->
+      <div class="px-3 py-2 flex items-center gap-2">
+        <div class="text-center flex-1 min-w-0">
+          <div class="text-2xl font-black ${vpdClass} leading-none">${vpd.toFixed(2)}</div>
+          <div class="text-[10px] font-semibold ${vpdClass} mt-0.5">${vpdLabel}</div>
+          <div class="text-[10px] text-slate-400">VPD kPa</div>
+        </div>
+        <div class="w-px h-10 bg-slate-100 shrink-0"></div>
+        <div class="text-center flex-1 min-w-0">
+          <div class="text-2xl font-black text-slate-700 leading-none">${interiorTemp}°</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">Interior °F</div>
+        </div>
+      </div>
+
+      <!-- Alert strip -->
+      <div class="px-3 pb-3">
+        <div class="${alertBg} rounded-lg px-2 py-1.5 text-[11px] leading-snug line-clamp-2">
+          ${bannerIcon} ${bannerMsg}
+        </div>
+      </div>
+    `;
+
+    // Tap → open detail modal
+    tile.addEventListener('click', () => openDetailModal(house.id));
+    tile.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal(house.id); } });
+
+    housesContainer.appendChild(tile);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DETAIL MODAL
+  // ─────────────────────────────────────────────────────────────────────────
+  let detailHouseId = null;
+
+  async function openDetailModal(houseId) {
+    const A = window.app;
+    detailHouseId = houseId;
+    const house = A.state.houses.find(h => h.id === houseId);
+    if (!house) return;
+
+    // Populate static header immediately
+    $('detail-modal-title').textContent = house.name || 'Unnamed';
+    $('detail-modal-subtitle').textContent = `${house.width || 30} × ${house.length || 96} ft · ${house.glazing || ''} · ${house.heating || ''}`;
+    $('detail-modal-body').innerHTML = '<div class="px-4 py-8 text-center text-slate-400 text-sm"><i class="fa-solid fa-rotate-right spinner mr-2"></i>Loading analysis…</div>';
+
+    // Show modal immediately (before async)
+    $('house-detail-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    const wx = currentWeather?.current || { tempF: 55, rh: 70, windMph: 5, windDir: 180, skyCover: 50 };
+    const intel = await A.getIntelligentHouseRecommendation(house, wx, A.state);
+
+    // ── Computed values ──
     const isLive = intel.telemetryStatus === 'live';
     const badgeClass = isLive ? 'bg-emerald-500' : 'bg-sky-500';
     const weatherTime = lastWeatherFetchTime
       ? lastWeatherFetchTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : null;
-    const badgeIcon = isLive
-      ? '🟢 Live Sensor'
-      : weatherTime ? `🦅 NWS · ${weatherTime}` : '🦅 NWS Fallback';
+    const badgeIcon = isLive ? '🟢 Live Sensor' : weatherTime ? `🦅 NWS · ${weatherTime}` : '🦅 NWS Fallback';
 
-    // ── VPD display ──
     const vpd = intel.trueVpd?.trueVPD_kPa ?? 0;
-    let vpdClass = 'vpd-ok';
-    let vpdLabel = 'Optimal';
-    if (vpd < 0.2) { vpdClass = 'vpd-critical'; vpdLabel = 'DANGER'; }
-    else if (vpd < 0.43) { vpdClass = 'vpd-warning'; vpdLabel = 'Low'; }
-    else if (vpd > 2.0) { vpdClass = 'vpd-mite'; vpdLabel = 'Mite Risk'; }
-    else if (vpd > 1.6) { vpdClass = 'vpd-ok'; vpdLabel = 'High'; }
+    let vpdClass = 'vpd-ok', vpdLabel = 'Optimal';
+    if (vpd < 0.2)       { vpdClass = 'vpd-critical'; vpdLabel = 'DANGER'; }
+    else if (vpd < 0.43) { vpdClass = 'vpd-warning';  vpdLabel = 'Low'; }
+    else if (vpd > 2.0)  { vpdClass = 'vpd-mite';     vpdLabel = 'Mite Risk'; }
+    else if (vpd > 1.6)  { vpdClass = 'vpd-ok';        vpdLabel = 'High'; }
 
-    // ── Priority banner ──
     const topAlert = intel.rec?.alerts?.[0];
     const noCropsConfigured = !house.crops?.length;
-    // When no crops are set, override to a neutral slate nudge — not an alarm
     const effectivePriority = noCropsConfigured ? 'setup' : (intel.rec?.priority || 'ok');
     const bannerClass = {
       critical: 'bg-red-600 text-white',
@@ -790,19 +958,15 @@ window.addEventListener('offline', () => {
       ok:       'bg-emerald-600 text-white',
       setup:    'bg-slate-200 text-slate-600'
     }[effectivePriority] || 'bg-slate-600 text-white';
-    const bannerIcon  = noCropsConfigured ? 'ℹ️' : (topAlert?.icon || '✅');
-    const bannerMsg   = noCropsConfigured
-      ? 'Tap ✏️ to configure crops — personalized VPD & pest alerts will activate.'
+    const bannerMsgFull = noCropsConfigured
+      ? 'Tap "Edit" above to configure crops — personalized VPD & pest alerts will activate.'
       : (topAlert?.msg || 'All systems nominal.').replace('(undefined)', '').replace(/\s+/g,' ').trim();
+    const bannerIconFull = noCropsConfigured ? 'ℹ️' : (topAlert?.icon || '✅');
 
-    // ── DLI ──
     const dli = intel.dli?.dli_mol ?? 0;
-
-    // ── Climate profile ──
     const climProf = A.CLIMATE_PROFILES[A.state.globalSettings.climateProfile] || {};
     const cropProf = A.PHOTOSYNTHETIC_CROP_TYPES[house.cropType] || {};
 
-    // ── 12-hr forecast pills ──
     const hourly = currentWeather?.hourly?.slice(0, 12) || [];
     const forecastHTML = hourly.map(h => `
       <div class="flex flex-col items-center bg-slate-50 rounded-lg p-2 min-w-[52px]">
@@ -811,8 +975,6 @@ window.addEventListener('offline', () => {
         <div class="text-xs text-slate-500">${h.skyCover}%☁</div>
       </div>`).join('');
 
-    // ── Enriched alerts HTML ──
-    // Truncate at first sentence boundary, not mid-word
     function truncateAlert(msg, maxLen = 140) {
       if (msg.length <= maxLen) return msg;
       const dot = msg.lastIndexOf('.', maxLen);
@@ -825,22 +987,11 @@ window.addEventListener('offline', () => {
         <span class="font-semibold">${a.icon}</span> ${truncateAlert(a.msg)}
       </div>`).join('');
 
-    card.innerHTML = `
-      <!-- Card Header -->
-      <div class="px-4 pt-4 pb-3 flex items-start justify-between">
-        <div>
-          <h3 class="font-bold text-slate-800 text-base leading-tight">${house.name || 'Unnamed'}</h3>
-          <p class="text-xs text-slate-400 mt-0.5">${house.width || 30} × ${house.length || 96} ft · ${house.glazing || ''}</p>
-        </div>
-        <button class="edit-house-btn p-2 text-slate-400 hover:text-emerald-600 min-h-[44px] min-w-[44px] flex items-center justify-center" data-id="${house.id}" aria-label="Edit ${house.name || 'structure'}">
-          <i class="fa-solid fa-pen-to-square text-lg"></i>
-        </button>
-      </div>
-
+    $('detail-modal-body').innerHTML = `
       <!-- Priority Banner -->
       <div class="${bannerClass} px-4 py-3 text-sm font-semibold flex items-start gap-2">
-        <span class="shrink-0">${bannerIcon}</span>
-        <span class="leading-snug">${bannerMsg}</span>
+        <span class="shrink-0">${bannerIconFull}</span>
+        <span class="leading-snug">${bannerMsgFull}</span>
       </div>
 
       <!-- Live Dashboard -->
@@ -867,87 +1018,74 @@ window.addEventListener('offline', () => {
         ${enrichedHTML ? `<div class="mt-3 space-y-2">${enrichedHTML}</div>` : ''}
       </div>
 
-      <!-- Collapsible Details Section -->
-      <details class="group">
-        <summary class="px-4 py-3 bg-slate-50 border-y border-slate-100 flex items-center justify-between cursor-pointer select-none min-h-[48px] text-sm font-semibold text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 transition-colors">
-          <span><i class="fa-solid fa-chart-line mr-2 text-emerald-500"></i>See Full Analysis</span>
-          <i class="fa-solid fa-chevron-down text-emerald-400 text-sm transition-transform details-arrow"></i>
-        </summary>
+      <!-- Weather & Light -->
+      <div class="px-4 py-4 border-b border-slate-100">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Weather & Light · 12-Hr Forecast</div>
+        <div class="flex gap-2 overflow-x-auto pb-1" style="-webkit-mask-image:linear-gradient(to right,black 85%,transparent);mask-image:linear-gradient(to right,black 85%,transparent)">
+          ${forecastHTML || '<span class="text-xs text-slate-400 italic">No NWS data. Check internet connection.</span>'}
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+          <div>☀️ Clear-sky DLI: <strong>${intel.dli?.clearSkyDLI_mol?.toFixed(1) ?? '—'} mol</strong></div>
+          <div>🌤 Daylight: <strong>${intel.dli?.daylengthHours?.toFixed(1) ?? '—'} hrs</strong></div>
+          <div>🌡 Current: <strong>${wx.tempF}°F / ${wx.rh}% RH</strong></div>
+          <div>💨 Wind: <strong>${wx.windMph ?? 0} mph ${wx.shortForecast?.split(' ').slice(0,2).join(' ') || ''}</strong></div>
+        </div>
+      </div>
 
-        <!-- Weather & Light -->
-        <div class="px-4 py-4 border-b border-slate-100">
-          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Weather & Light · 12-Hr Forecast</div>
-          <div class="flex gap-2 overflow-x-auto pb-1" style="-webkit-mask-image:linear-gradient(to right,black 85%,transparent);mask-image:linear-gradient(to right,black 85%,transparent)">
-            ${forecastHTML || '<span class="text-xs text-slate-400 italic">No NWS data. Check internet connection.</span>'}
-          </div>
-          <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
-            <div>☀️ Clear-sky DLI: <strong>${intel.dli?.clearSkyDLI_mol?.toFixed(1) ?? '—'} mol</strong></div>
-            <div>🌤 Daylight: <strong>${intel.dli?.daylengthHours?.toFixed(1) ?? '—'} hrs</strong></div>
-            <div>🌡 Current: <strong>${wx.tempF}°F / ${wx.rh}% RH</strong></div>
-            <div>💨 Wind: <strong>${wx.windMph ?? 0} mph ${wx.shortForecast?.split(' ').slice(0,2).join(' ') || ''}</strong></div>
+      <!-- Crop Config -->
+      <div class="px-4 py-4 border-b border-slate-100">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Crop Configuration</div>
+        <div class="flex items-center gap-2 text-sm text-slate-700">
+          <span class="text-xl">${cropProf.icon || '🌱'}</span>
+          <div>
+            <div class="font-semibold">${cropProf.label || 'Not Set'}</div>
+            <div class="text-xs text-slate-400">${cropProf.pathway || ''} pathway · ${cropProf.waterUseEfficiency || ''} WUE</div>
           </div>
         </div>
-
-        <!-- Crop Config -->
-        <div class="px-4 py-4 border-b border-slate-100">
-          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Crop Configuration</div>
-          <div class="flex items-center gap-2 text-sm text-slate-700">
-            <span class="text-xl">${cropProf.icon || '🌱'}</span>
-            <div>
-              <div class="font-semibold">${cropProf.label || 'Not Set'}</div>
-              <div class="text-xs text-slate-400">${cropProf.pathway || ''} pathway · ${cropProf.waterUseEfficiency || ''} WUE</div>
-            </div>
-          </div>
-          <div class="mt-2 text-xs text-slate-500">
-            Light sat: <strong>${cropProf.lightSaturationPPFD ?? '—'} µmol PPFD</strong> · 
-            VPD target: <strong>${cropProf.vpdOptimal?.min ?? '—'}–${cropProf.vpdOptimal?.max ?? '—'} kPa</strong>
-          </div>
+        <div class="mt-2 text-xs text-slate-500">
+          Light sat: <strong>${cropProf.lightSaturationPPFD ?? '—'} µmol PPFD</strong> ·
+          VPD target: <strong>${cropProf.vpdOptimal?.min ?? '—'}–${cropProf.vpdOptimal?.max ?? '—'} kPa</strong>
         </div>
+      </div>
 
-        <!-- Regional Academy -->
-        <div class="px-4 py-4 border-b border-slate-100">
-          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">🎓 Regional Academy — ${climProf.name || A.state.globalSettings.climateProfile}</div>
-          <details class="mb-2">
-            <summary class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed cursor-pointer select-none hover:bg-amber-100 transition-colors">
-              <strong>Primary Threat:</strong> ${climProf.primaryThreat ? climProf.primaryThreat.slice(0,100)+'… ▸' : 'Select a climate profile in settings.'}
-            </summary>
-            <div class="mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed">
-              ${climProf.primaryThreat || ''}
-            </div>
-          </details>
-          <details>
-            <summary class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 leading-relaxed cursor-pointer select-none hover:bg-slate-100 transition-colors">
-              <strong>Engineering:</strong> ${climProf.structuralAdvice ? climProf.structuralAdvice.slice(0,100)+'… ▸' : ''}
-            </summary>
-            <div class="mt-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 leading-relaxed">
-              ${climProf.structuralAdvice || ''}
-            </div>
-          </details>
-        </div>
+      <!-- Regional Academy -->
+      <div class="px-4 py-4 border-b border-slate-100">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">🎓 Regional Academy — ${climProf.name || A.state.globalSettings.climateProfile}</div>
+        <details class="mb-2">
+          <summary class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed cursor-pointer select-none hover:bg-amber-100 transition-colors">
+            <strong>Primary Threat:</strong> ${climProf.primaryThreat ? climProf.primaryThreat.slice(0,100)+'… ▸' : 'Select a climate profile in settings.'}
+          </summary>
+          <div class="mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed">${climProf.primaryThreat || ''}</div>
+        </details>
+        <details>
+          <summary class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 leading-relaxed cursor-pointer select-none hover:bg-slate-100 transition-colors">
+            <strong>Engineering:</strong> ${climProf.structuralAdvice ? climProf.structuralAdvice.slice(0,100)+'… ▸' : ''}
+          </summary>
+          <div class="mt-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 leading-relaxed">${climProf.structuralAdvice || ''}</div>
+        </details>
+      </div>
 
-        <!-- Hardware Sync -->
-        <div class="px-4 py-4">
-          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">📡 Hardware Sync</div>
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center ${isLive ? 'bg-emerald-100' : 'bg-slate-100'}">
-              <i class="fa-solid fa-wifi ${isLive ? 'text-emerald-600' : 'text-slate-400'}"></i>
-            </div>
-            <div class="flex-1">
-              <div class="text-sm font-semibold text-slate-700">${house.sensorConfig?.brand && house.sensorConfig.brand !== 'none' ? house.sensorConfig.brand.toUpperCase() : 'No Sensor'}</div>
-              <div class="text-xs text-slate-400">${house.sensorConfig?.deviceId || 'Configure sensor in edit mode'}</div>
-            </div>
-            <div class="text-xs font-semibold ${isLive ? 'text-emerald-600' : 'text-slate-400'}">
-              ${intel.telemetryStatus.replace('_', ' ').toUpperCase()}
-            </div>
+      <!-- Hardware Sync -->
+      <div class="px-4 py-4">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">📡 Hardware Sync</div>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center ${isLive ? 'bg-emerald-100' : 'bg-slate-100'}">
+            <i class="fa-solid fa-wifi ${isLive ? 'text-emerald-600' : 'text-slate-400'}"></i>
           </div>
+          <div class="flex-1">
+            <div class="text-sm font-semibold text-slate-700">${house.sensorConfig?.brand && house.sensorConfig.brand !== 'none' ? house.sensorConfig.brand.toUpperCase() : 'No Sensor'}</div>
+            <div class="text-xs text-slate-400">${house.sensorConfig?.deviceId || 'Configure sensor in edit mode'}</div>
+          </div>
+          <div class="text-xs font-semibold ${isLive ? 'text-emerald-600' : 'text-slate-400'}">${intel.telemetryStatus.replace('_', ' ').toUpperCase()}</div>
         </div>
-      </details>
+      </div>
     `;
+  }
 
-    housesContainer.appendChild(card);
-
-    // Wire edit button
-    card.querySelector('.edit-house-btn').addEventListener('click', () => openModal(house.id));
+  function closeDetailModal() {
+    $('house-detail-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+    detailHouseId = null;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * Greenhouse Assist — Sensor-less Greenhouse Thermodynamic & Biology Engine
+ * GrowPulse — Sensor-less Greenhouse Thermodynamic & Biology Engine
  * ═══════════════════════════════════════════════════════════════════════════════
  *
  * Pure logic module for estimating internal greenhouse conditions using
@@ -2048,7 +2048,7 @@ const devLog = (...args) => { if (DEV_MODE) console.log(...args); };
  * Firebase project configuration.
  * Replace this placeholder with your actual Firebase project keys.
  */
-export const firebaseConfig = {
+const firebaseConfig = {
     apiKey:            'AIzaSyBDUYNeXubia-Lw3AxTkwVEJb7onBRpRHk',
     authDomain:        'greenhouse-os.firebaseapp.com',
     projectId:         'greenhouse-os',
@@ -2790,7 +2790,7 @@ export function exportFarmDataToCSV(currentState) {
     //  SECTION A: HEADER & METADATA
     // ═══════════════════════════════════════════════════════════════════
 
-    lines.push('# Practical Farm Tools — Greenhouse OS Data Archive');
+    lines.push('# Practical Farm Tools — GrowPulse Data Archive');
     lines.push(`# Generated: ${timestamp}`);
     lines.push(`# Account: ${currentState.user ? currentState.user.email : 'Local (not signed in)'}`);
     lines.push(`# Subscription: ${currentState.isReadOnly ? 'Expired (Read-Only)' : 'Active'}`);
@@ -5416,7 +5416,7 @@ if (typeof window !== 'undefined') {
     };
 
     devLog(
-        '%c 🌿 Greenhouse OS Engine loaded → window.app (' +
+        '%c 🌿 GrowPulse Engine loaded → window.app (' +
         `${Object.keys(window.app).length} exports) `,
         'background:#166534;color:#bbf7d0;font-size:12px;font-weight:bold;' +
         'padding:4px 10px;border-radius:4px;'

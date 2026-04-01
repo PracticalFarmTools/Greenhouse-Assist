@@ -12,10 +12,19 @@
 const GOVEE_BASE = 'https://developer-api.govee.com/v1';
 
 export default async function handler(req, res) {
-    // CORS headers for the frontend
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // CORS headers — locked to known deployment origins (not wildcard)
+    const ALLOWED_ORIGINS = [
+        'https://practicalfarmtools.com',
+        'https://www.practicalfarmtools.com',
+        'https://greenhouse-os.vercel.app',  // Vercel preview/testing
+        'http://localhost:3000'               // Local dev
+    ];
+    const origin = req.headers.origin || '';
+    const ALLOWED_ORIGIN = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-govee-key');
+    res.setHeader('Vary', 'Origin');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -25,10 +34,11 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const apiKey = req.headers['x-govee-key'] || req.query.key;
+    // Header only — never accept keys as URL query params (they leak into server logs)
+    const apiKey = req.headers['x-govee-key'];
     if (!apiKey) {
         return res.status(400).json({ 
-            error: 'Missing Govee API key. Pass via x-govee-key header or key query param.' 
+            error: 'Missing Govee API key. Pass via x-govee-key header.' 
         });
     }
 
@@ -69,8 +79,7 @@ export default async function handler(req, res) {
     } catch (err) {
         console.error('[govee-proxy] Error:', err.message);
         return res.status(502).json({ 
-            error: 'Failed to reach Govee API.',
-            detail: err.message 
+            error: 'Failed to reach Govee API. Please try again.'
         });
     }
 }
