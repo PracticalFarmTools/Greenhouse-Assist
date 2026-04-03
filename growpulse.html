@@ -1602,5 +1602,199 @@ try {
   console.error('[ui] BOOT FAILED:', err.message, err.stack);
 }
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     GEMMA FARMHAND — 100% Offline Edge AI
+     WebGPU + WebLLM · Gemma 2B · Voice-to-Text
+═══════════════════════════════════════════════════════════════════════ -->
+<button id="ai-fab" class="fixed bottom-6 right-6 bg-emerald-600 text-white p-4 rounded-full shadow-2xl z-50 flex items-center justify-center text-2xl hover:bg-emerald-700 transition-all border-2 border-white">
+  🤖
+</button>
+
+<div id="ai-modal" class="fixed inset-0 bg-slate-50 z-[60] flex-col hidden h-[100dvh] w-full max-w-md mx-auto shadow-2xl">
+  
+  <div class="bg-emerald-800 text-white p-4 flex justify-between items-center shadow-md shrink-0">
+    <div>
+      <h2 class="text-xl font-bold">Gemma Farmhand</h2>
+      <p class="text-xs text-emerald-200">100% Offline Edge AI</p>
+    </div>
+    <button id="close-ai" class="text-3xl font-bold px-2">&times;</button>
+  </div>
+
+  <div id="ai-loading-overlay" class="flex-1 flex flex-col items-center justify-center p-6 text-center bg-white">
+    <div class="mb-6 text-6xl">🧠</div>
+    <h3 class="text-xl font-bold text-slate-800 mb-2">Local AI Setup</h3>
+    <p class="text-sm text-slate-600 mb-8">Download the Google Gemma model (~1.5GB) directly to your phone's processor. Required once. Works 100% offline forever.</p>
+    <button id="download-ai-btn" class="w-full bg-emerald-600 text-white font-bold py-4 px-4 rounded-xl shadow-lg text-lg">
+      Download &amp; Initialize
+    </button>
+    <p id="ai-progress-text" class="text-xs text-emerald-600 mt-4 font-mono font-bold"></p>
+  </div>
+
+  <div id="ai-chat-interface" class="hidden flex-col h-full bg-slate-100 overflow-hidden">
+    <div id="ai-chat-history" class="flex-1 overflow-y-auto p-4 space-y-4 pb-4">
+      <div class="bg-white border border-slate-200 p-3 rounded-lg text-slate-800 text-sm shadow-sm w-5/6">
+        👋 <strong>System:</strong> I am online. I can read your live greenhouse sensors and weather data. How can I help you today?
+      </div>
+    </div>
+
+    <div class="bg-white border-t border-slate-200 p-3 flex items-center space-x-2 shrink-0 pb-safe">
+      <button id="ai-mic-btn" class="bg-slate-100 text-slate-600 p-3 rounded-full text-xl hover:bg-red-100 hover:text-red-600 transition-colors w-12 h-12 flex items-center justify-center shrink-0">
+        🎙️
+      </button>
+      <input type="text" id="ai-text-input" class="flex-1 border border-slate-300 rounded-full px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 bg-slate-50" placeholder="Ask about VPD...">
+      <button id="ai-send-btn" class="bg-emerald-600 text-white p-3 rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-md">
+        ➤
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // Import WebLLM via CDN
+  import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+
+  // UI Elements
+  const fab = document.getElementById('ai-fab');
+  const modal = document.getElementById('ai-modal');
+  const closeBtn = document.getElementById('close-ai');
+  const downloadBtn = document.getElementById('download-ai-btn');
+  const progressText = document.getElementById('ai-progress-text');
+  const loadingOverlay = document.getElementById('ai-loading-overlay');
+  const chatInterface = document.getElementById('ai-chat-interface');
+  const chatHistory = document.getElementById('ai-chat-history');
+  const textInput = document.getElementById('ai-text-input');
+  const sendBtn = document.getElementById('ai-send-btn');
+  const micBtn = document.getElementById('ai-mic-btn');
+
+  let engine = null;
+
+  // Toggle Modal
+  fab.addEventListener('click', () => { modal.classList.remove('hidden'); modal.classList.add('flex'); });
+  closeBtn.addEventListener('click', () => { modal.classList.add('hidden'); modal.classList.remove('flex'); });
+
+  function addMessage(sender, text) {
+    const msgDiv = document.createElement('div');
+    const isBot = sender === 'Gemma';
+    msgDiv.className = `p-3 rounded-lg text-sm w-5/6 shadow-sm ${isBot ? 'bg-white border border-slate-200 text-slate-800 self-start' : 'bg-emerald-600 text-white self-end ml-auto'}`;
+    msgDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    chatHistory.appendChild(msgDiv);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+    return msgDiv;
+  }
+
+  // 1. Initialize Gemma via WebGPU
+  downloadBtn.addEventListener('click', async () => {
+    downloadBtn.disabled = true;
+    downloadBtn.innerText = "Initializing Engine...";
+    try {
+      // Use the optimized 2B parameter Gemma model
+      const selectedModel = "gemma-2b-it-q4f16_1-MLC";
+      engine = await webllm.CreateMLCEngine(selectedModel, {
+        initProgressCallback: (progress) => {
+          progressText.innerText = progress.text;
+        }
+      });
+      // Initialization complete
+      loadingOverlay.classList.add('hidden');
+      loadingOverlay.classList.remove('flex');
+      chatInterface.classList.remove('hidden');
+      chatInterface.classList.add('flex');
+    } catch (err) {
+      progressText.innerText = "Error: Your device/browser may not support WebGPU. " + err.message;
+      downloadBtn.disabled = false;
+      downloadBtn.innerText = "Retry Download";
+    }
+  });
+
+  // 2. Chat Logic (Context-Aware Bridge)
+  async function handleChat(userText) {
+    if (!userText || !engine) return;
+    
+    addMessage('You', userText);
+    textInput.value = '';
+    
+    // THE BRIDGE: Read live farm state from the existing GrowPulse engine
+    let farmContext = "Unknown state.";
+    try {
+      const appState = window.app?.state || {};
+      
+      // Strip out API keys before passing to local AI context
+      const safeState = JSON.parse(JSON.stringify(appState));
+      if (safeState.globalSettings?.apiKeys) {
+        delete safeState.globalSettings.apiKeys;
+      }
+      // Strip user PII
+      if (safeState.user) {
+        safeState.user = { displayName: safeState.user.displayName };
+      }
+      farmContext = JSON.stringify(safeState);
+    } catch (e) { console.warn("[gemma] Could not read app state:", e.message); }
+
+    const systemPrompt = `You are an expert Agronomic AI integrated into a high-tunnel greenhouse app running offline on a farmer's device. 
+    Current Farm Context: ${farmContext}. 
+    Use this data to give specific, practical advice. Keep answers under 3 sentences. Focus on True Leaf VPD, temperature, and moisture.`;
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userText }
+    ];
+
+    const thinkingMsg = addMessage('System', '<i>Thinking offline...</i>');
+
+    try {
+      // Run inference 100% locally via WebGPU
+      const reply = await engine.chat.completions.create({ messages });
+      thinkingMsg.remove();
+      addMessage('Gemma', reply.choices[0].message.content);
+    } catch (error) {
+      thinkingMsg.remove();
+      addMessage('System', 'Error generating response: ' + error.message);
+    }
+  }
+
+  sendBtn.addEventListener('click', () => handleChat(textInput.value));
+  textInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChat(textInput.value); });
+
+  // 3. Muddy Gloves (Voice-to-Text via Web Speech API)
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    micBtn.addEventListener('click', () => {
+      micBtn.classList.add('bg-red-500', 'text-white', 'animate-pulse');
+      micBtn.classList.remove('bg-slate-100', 'text-slate-600');
+      textInput.placeholder = "Listening...";
+      recognition.start();
+    });
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      textInput.value = transcript;
+      handleChat(transcript); // Auto-sends when voice stops
+    };
+
+    const resetMicUI = () => {
+      micBtn.classList.remove('bg-red-500', 'text-white', 'animate-pulse');
+      micBtn.classList.add('bg-slate-100', 'text-slate-600');
+    };
+
+    recognition.onspeechend = () => {
+      recognition.stop();
+      resetMicUI();
+      textInput.placeholder = "Ask about VPD...";
+    };
+    
+    recognition.onerror = () => {
+      resetMicUI();
+      textInput.placeholder = "Voice error. Please type.";
+    };
+  } else {
+    micBtn.style.display = 'none'; // Hide if browser doesn't support voice
+  }
+</script>
+
 </body>
 </html>
