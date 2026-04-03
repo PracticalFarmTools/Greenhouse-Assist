@@ -1727,7 +1727,7 @@ export function getHouseRecommendation(house, weather) {
     //   Action: Open leeward + run heat to spike the temp differential,
     //   which raises SVP faster than AVP → widens VPD → breaks dew point.
     if (vpd < 0.20 && estTemp > 55) {
-        pushAlert('critical', '🍄',
+        pushAlert('critical', '💧',
             `ACTIVE DEHUMIDIFICATION: VPD ${vpd.toFixed(2)} kPa — FREE WATER on leaves. ` +
             `Open Leeward 2 inches & RUN HEAT to spike VPD.`
         );
@@ -5327,7 +5327,7 @@ export async function getIntelligentHouseRecommendation(house, weather, appState
             // Energy cost: ~$0.50-1.00 per purge cycle (propane at $2.50/gal)
 
             enrichedAlerts.push({
-                level: 'critical', icon: '🍄',
+                level: 'critical', icon: '💧',
                 msg: `BOTRYTIS PURGE: True VPD ${activeVPD.toFixed(2)} kPa < 0.4. ` +
                      `Free water forming on leaf surfaces. VENT leeward 2" AND RUN HEAT ` +
                      `simultaneously for 20-30 min. Leaf temp Δ: ${trueVpd.deltaF}°F. ` +
