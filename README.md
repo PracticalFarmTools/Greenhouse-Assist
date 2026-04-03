@@ -17,10 +17,13 @@ Part of the **Practical Farm Tools** suite — [practicalfarmtools.com](https://
 
 | Crop | ☀️ Day Range | 🌙 Night Range | Botrytis RH |
 |------|------------|--------------|-------------|
-| Solanaceous (Tomatoes / Peppers) | 70–85°F | 60–68°F | 85% |
-| Cold-Hardy Greens (Spinach / Kale) | 35–70°F | 28–55°F | 80% |
-| Cucurbits (Cucumbers / Melons) | 75–90°F | 60–70°F | 90% |
-| Root Vegetables (Carrots / Beets) | 40–75°F | 35–60°F | 83% |
+| 🍅 Solanaceous (Tomatoes / Peppers) | 70–85°F | 60–68°F | 85% |
+| 🥬 Cold-Hardy Greens (Spinach / Kale) | 35–70°F | 28–55°F | 80% |
+| 🥒 Cucurbits (Cucumbers / Melons) | 75–90°F | 60–70°F | 90% |
+| 🥕 Root Vegetables (Carrots / Beets) | 40–75°F | 35–60°F | 83% |
+| 🌸 Floriculture (Potted Flowers) | 60–72°F | 50–62°F | 80% |
+| 🌹 Cut Roses | 62–70°F | 55–62°F | 78% |
+| 🌱 Nursery Plugs (Seedlings) | 62–75°F | 55–65°F | 82% |
 
 ## Files
 

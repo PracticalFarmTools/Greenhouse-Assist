@@ -12,6 +12,7 @@
 !icon-512.png
 !api/
 !api/**
+!vercel.json
 
 # Never commit environment or secret files
 .env

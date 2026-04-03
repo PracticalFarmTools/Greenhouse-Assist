@@ -425,7 +425,7 @@
 
   <div class="step">
     <div class="step-title"><span class="step-number">3</span> Set Your GPS Location</div>
-    <p>After signing in, tap <strong>Global Farm Settings</strong> (gear icon) and then the big blue <strong>"📍
+    <p>After signing in, tap <strong>Settings &amp; Help</strong> (the gear icon at the top of the dashboard) and then the big blue <strong>"📍
         Auto-Detect GPS Location"</strong> button. This tells the app where your farm is so it can pull the correct NWS
       forecast.</p>
     <p style="font-size: 0.85rem; color: var(--text-dim);">Your browser will ask for location permission — tap "Allow."
@@ -531,45 +531,60 @@
 
   <div class="step">
     <div class="step-title"><span class="step-number">3</span> Set Your Crops (Important!)</div>
-    <p>The <strong>🌱 Crop Configuration</strong> section opens automatically for new structures. This is the most
+    <p>The <strong>🌱 What's Growing?</strong> section opens automatically for new structures. This is the most
       important setting:</p>
     <ul>
-      <li><strong>"What are you growing?"</strong> — this dropdown controls your temperature and VPD targets:</li>
+      <li><strong>Check all crops that apply</strong> — temperature, VPD, and disease alert targets adjust automatically based on your selections:</li>
     </ul>
     <table>
       <thead>
         <tr>
-          <th>Selection</th>
-          <th>Crops</th>
-          <th>VPD Target</th>
+          <th>Crop</th>
           <th>Temp Range</th>
+          <th>Key Alert</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>🍅 Fruiting Crops</td>
-          <td>Tomatoes, peppers, cucumbers, eggplant</td>
-          <td>0.8–1.6 kPa</td>
+          <td>🍅 Tomatoes / Peppers / Eggplant</td>
           <td>70–85°F day</td>
+          <td>Botrytis at RH > 85%</td>
         </tr>
         <tr>
-          <td>🥬 Greens & Herbs</td>
-          <td>Lettuce, spinach, kale, herbs, microgreens</td>
-          <td>0.4–1.0 kPa</td>
-          <td>45–70°F day</td>
+          <td>🥬 Lettuce / Spinach / Kale</td>
+          <td>35–70°F day</td>
+          <td>Bolting above 75°F</td>
         </tr>
         <tr>
-          <td>🌵 Succulents & Cacti</td>
-          <td>Cacti, agave, aloe, sedum</td>
-          <td>0.3–1.2 kPa</td>
-          <td>70–95°F day</td>
+          <td>🥒 Cucumbers / Melons / Squash</td>
+          <td>75–90°F day</td>
+          <td>Chilling injury below 55°F</td>
+        </tr>
+        <tr>
+          <td>🥕 Carrots / Beets / Radishes</td>
+          <td>40–75°F day</td>
+          <td>Bolting in beets above 75°F</td>
+        </tr>
+        <tr>
+          <td>🌸 Potted Flowers (Geraniums / Petunias)</td>
+          <td>60–72°F day</td>
+          <td>Botrytis on petals at RH > 80%</td>
+        </tr>
+        <tr>
+          <td>🌹 Cut Roses</td>
+          <td>62–70°F day</td>
+          <td>Most Botrytis-susceptible crop (RH > 78%)</td>
+        </tr>
+        <tr>
+          <td>🌱 Seedling Plugs / Transplants</td>
+          <td>62–75°F day</td>
+          <td>Damping-off risk; frost caution below 45°F</td>
         </tr>
       </tbody>
     </table>
     <div class="info-box warning">
-      <strong>⚠️ Get this right:</strong> If you're growing lettuce but leave this set to "Fruiting Crops," the app will
-      target 70–85°F instead of 45–70°F. Your alerts will be wrong. Double-check this dropdown matches what's actually
-      in the ground.
+      <strong>⚠️ Get this right:</strong> If you're growing lettuce but select only "Tomatoes / Peppers", the app will
+      target 70–85°F instead of 35–70°F. Your alerts will be wrong. Check every crop that's actually in the ground.
     </div>
   </div>
 
@@ -586,8 +601,8 @@
 
   <p>Each greenhouse structure gets its own <strong>card</strong> on the main screen. Here's what you'll see:</p>
 
-  <h3>The Priority Badge</h3>
-  <p>At the top of each card, a colored badge shows the most urgent action needed:</p>
+  <h3>The Priority Bar</h3>
+  <p>Across the top of each tile, a full-width colored bar shows the most urgent action needed:</p>
 
   <table>
     <thead>
@@ -621,7 +636,7 @@
     </tbody>
   </table>
 
-  <h3>The Three Key Numbers</h3>
+  <h3>The Two Key Numbers</h3>
 
   <div class="step" style="background: #f0fdf4; border-color: #bbf7d0;">
     <div class="step-title">🌡️ Est. Interior Temperature</div>
@@ -630,15 +645,13 @@
   </div>
 
   <div class="step" style="background: #eff6ff; border-color: #bfdbfe;">
-    <div class="step-title">💧 Leaf VPD (kPa)</div>
+    <div class="step-title">💧 Air Moisture (VPD)</div>
     <p>The <strong>Vapor Pressure Deficit at the leaf surface</strong> — what your plants actually experience, not just
-      air VPD. This accounts for solar heating and transpiration cooling. See the next section for how to read this.</p>
+      air VPD. This accounts for solar heating and transpiration cooling. Tap any tile to open the full detail view, where you'll also see Today's Light (DLI) and the 12-hour forecast. See the next section for how to read VPD.</p>
   </div>
 
-  <div class="step" style="background: #fffbeb; border-color: #fde68a;">
-    <div class="step-title">☀️ DLI (mol/m²/day)</div>
-    <p>The <strong>Daily Light Integral</strong> — total photosynthetically useful light for today. Calculated from your
-      latitude, day of year, and NWS cloud cover data.</p>
+  <div class="info-box tip">
+    <strong>📡 Live sensor vs. NWS estimated:</strong> Each tile shows a small badge in its top bar. <strong>🟢 Live Sensor</strong> means a hardware sensor is actively reading interior conditions. <strong>📡 NWS Est.</strong> means the app is estimating from the outdoor weather forecast — still accurate, just physics-based rather than measured.
   </div>
 
 
@@ -737,10 +750,16 @@
           <td>Bolts (flowers prematurely) above 20 mol</td>
         </tr>
         <tr>
-          <td>🌱 Seedlings / Transplants</td>
+          <td>🌱 Seedling Plugs / Transplants</td>
+          <td>5 mol</td>
+          <td>8–12 mol</td>
+          <td>Root failure below 5 mol; tip burn above 15 mol</td>
+        </tr>
+        <tr>
+          <td>🌸 Floriculture (Flowers)</td>
           <td>10 mol</td>
-          <td>12–16 mol</td>
-          <td>Stretch and weaken below 8 mol</td>
+          <td>10–18 mol</td>
+          <td>Petals bleach or burn above 20 mol</td>
         </tr>
         <tr>
           <td>🍅 Fruiting Crops</td>
@@ -822,6 +841,26 @@
           <td>Wind > 45 mph (subtropical)</td>
           <td>Secure panels, retract shade, evacuate if > 75 mph</td>
         </tr>
+        <tr>
+          <td>🌹 Botrytis Band (Flowers)</td>
+          <td>RH > 80% + Temp 55–70°F</td>
+          <td>Activate dehumidification + HAF fans immediately</td>
+        </tr>
+        <tr>
+          <td>🌡️ Morning DIF Window</td>
+          <td>5–8 AM, floriculture crops</td>
+          <td>Lower temp 10°F for 2–3 hrs to control stem stretch</td>
+        </tr>
+        <tr>
+          <td>🦠 Damping-Off Risk</td>
+          <td>RH > 82% + Temp > 62°F, nursery plugs</td>
+          <td>Increase air circulation, reduce watering frequency</td>
+        </tr>
+        <tr>
+          <td>🌡️ Hardening Frost Caution</td>
+          <td>Temp ≤ 45°F, nursery plugs</td>
+          <td>Do NOT move plugs outdoors — chilling injury risk</td>
+        </tr>
       </tbody>
     </table>
 
@@ -832,7 +871,7 @@
     <h2>8. Editing & Deleting Structures</h2>
 
     <h3>To Edit:</h3>
-    <p>Tap the <strong>pencil icon (✏️)</strong> on any greenhouse card. The same form will appear, pre-filled with your
+    <p>Tap any greenhouse tile to open its full detail view. From there, tap the green <strong>Edit</strong> button in the top-right corner. The same form will appear, pre-filled with your
       current settings. Change what you need, then tap <strong>"Save Structure."</strong></p>
 
     <h3>To Delete:</h3>
@@ -911,49 +950,64 @@
 ═══════════════════════════════════════════════════════════════ -->
     <h2>11. Hardware Sensors (Optional)</h2>
 
-    <p>GrowPulse works great without sensors. But if you have them, you can connect them for even more accurate
-      data:</p>
+    <p>GrowPulse works great without sensors — it estimates interior conditions from the NWS forecast using physics models. But if you have a compatible sensor, you can connect it for true interior readings:</p>
+
+    <h3>Cloud-Connected (plug-and-play)</h3>
+    <p>These brands connect directly through the app with an API key:</p>
 
     <table>
       <thead>
         <tr>
           <th>Brand</th>
-          <th>Setup</th>
+          <th>How to Set Up</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Davis WeatherLink</td>
-          <td>Enter your API Key in Global Settings → enter Device ID in each structure's Sensor section</td>
+          <td>🟢 Govee</td>
+          <td>
+            1. Get your API key from the Govee Home app: <em>Profile → About Us → Apply for API Key</em>.<br>
+            2. Paste it into <strong>Settings &amp; Help → Govee API Key</strong> and tap <strong>Test</strong> to confirm it works.<br>
+            3. Tap <strong>Save Settings</strong>.<br>
+            4. Open each greenhouse, tap <strong>Hardware Sensor → Govee</strong>, and enter the Device ID shown in the Govee app.
+          </td>
         </tr>
         <tr>
-          <td>Ecowitt</td>
-          <td>Same process — API Key in settings, Device ID per structure</td>
-        </tr>
-        <tr>
-          <td>SenseCap</td>
-          <td>Same process — API Key in settings, Device ID per structure</td>
+          <td>🟢 SensorPush</td>
+          <td>
+            1. Get your API credentials from SensorPush (email support@sensorpush.com or use their developer portal).<br>
+            2. Paste your API key into <strong>Settings &amp; Help → SensorPush API Key</strong> and tap <strong>Save Settings</strong>.<br>
+            3. Open each greenhouse, tap <strong>Hardware Sensor → SensorPush</strong>, and enter the device ID for that structure.
+          </td>
         </tr>
       </tbody>
     </table>
 
-    <p>When a sensor is connected and reporting fresh data (within 60 minutes), the dashboard shows <span
-        class="badge green">LIVE</span> in the Hardware Sync section. If the sensor data goes stale, the app
-      automatically falls back to NWS weather data.</p>
+    <h3>Local Setup (advanced)</h3>
+    <p>These brands can be assigned to structures but require local network configuration outside the app (see each manufacturer's documentation):</p>
+    <ul>
+      <li><strong>Davis WeatherLink</strong> — local API via WeatherLink Live hub</li>
+      <li><strong>Ecowitt</strong> — local push to custom endpoint</li>
+      <li><strong>SenseCap</strong> — LoRaWAN gateway required</li>
+    </ul>
+
+    <div class="info-box tip">
+      <strong>🟢 How to know it's working:</strong> Once a sensor is connected and sending fresh data (within 60 minutes), each greenhouse tile shows <strong>🟢 Live Sensor</strong> in its top bar, and the detail view shows a green <strong>“Live sensor data”</strong> banner with the actual interior temperature and humidity readings. If the sensor goes stale, the app automatically falls back to NWS weather data and shows <strong>📡 NWS Est.</strong> instead.
+    </div>
 
 
     <!-- ═══════════════════════════════════════════════════════════════
      SECTION 12: REGIONAL ACADEMY
 ═══════════════════════════════════════════════════════════════ -->
-    <h2>12. Regional Academy</h2>
+    <h2>12. Regional Growing Tips</h2>
 
-    <p>Every greenhouse card includes a <strong>🎓 Regional Academy</strong> section. This is tailored to your climate
+    <p>Every greenhouse detail view includes a <strong>🌎 Regional Growing Tips</strong> section. This is tailored to your climate
       profile and includes:</p>
 
     <ul>
-      <li><strong>Primary Threat</strong> — the #1 thing that historically kills crops in your region, with specific
+      <li><strong>Biggest Risk in Your Area</strong> — the #1 thing that historically kills crops in your region, with specific
         mitigation strategies</li>
-      <li><strong>Engineering Advice</strong> — structural recommendations for your climate (slope, drainage, anchoring,
+      <li><strong>Structure &amp; Setup Tips</strong> — structural recommendations for your climate (slope, drainage, anchoring,
         ventilation sizing)</li>
     </ul>
 
@@ -989,6 +1043,19 @@
       <strong>⚠️ The most common mistake:</strong> Closing everything up tight on a cool, humid evening. This traps
       moisture overnight, drives VPD below 0.4, and creates perfect conditions for Botrytis cinerea to sporulate. A
       cracked vent plus a small fan is almost always better than a sealed house.
+    </div>
+
+    <div class="info-box tip">
+      <strong>🌸 Floriculture growers — Morning DIF/DROP:</strong> If you're growing potted flowers or cut roses, check
+      your alerts at dawn (5–8 AM). The app will prompt you to lower your temperature 10°F for 2–3 hours. This suppresses
+      stem elongation ("stretch") without chemical growth regulators. It's the most cost-effective morphology tool
+      available.
+    </div>
+
+    <div class="info-box info">
+      <strong>🌱 Nursery growers — Hardening-off watch:</strong> If you're producing plugs or transplants, keep an eye
+      on the overnight low. The app will warn you when temps drop to 45°F or below — young tissue suffers irreversible
+      chilling injury at these temperatures. Don't move flats outdoors until you see consistently warmer nights.
     </div>
 
 
@@ -1047,6 +1114,22 @@
         <tr>
           <td class="key-term">LST</td>
           <td>Leaf Surface Temperature — estimated leaf temp. Can be 5–10°F different from air temp.</td>
+        </tr>
+        <tr>
+          <td class="key-term">DIF</td>
+          <td>Day/Night temperature differential. Negative DIF (cooler nights) suppresses stem stretch in floriculture crops. The key to compact, quality potted flowers.</td>
+        </tr>
+        <tr>
+          <td class="key-term">Morning DROP</td>
+          <td>Lowering greenhouse temp 5–15°F for 2–3 hours at dawn (5–8 AM). Achieves the same stem control as full-night negative DIF, at a fraction of the energy cost.</td>
+        </tr>
+        <tr>
+          <td class="key-term">Damping-Off</td>
+          <td>Seedling disease caused by Pythium and Rhizoctonia fungi. Attacks young root systems at high humidity + warmth. Can destroy an entire flat of plugs within 48 hours.</td>
+        </tr>
+        <tr>
+          <td class="key-term">EC</td>
+          <td>Electrical Conductivity — measures dissolved salt concentration in soil or irrigation water (mS/cm). High EC = salt stress. Nursery plugs are sensitive above 1.5 mS/cm.</td>
         </tr>
       </tbody>
     </table>

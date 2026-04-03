@@ -199,14 +199,25 @@
 
         <!-- Hardware Integrations -->
         <div>
-          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">🔑 Sensor API Keys <span class="text-slate-400 font-normal normal-case">(optional — app works without sensors)</span></label>
-          <div class="space-y-2">
-            <input id="key-govee" type="password" autocomplete="off" placeholder="Govee API Key"
-              class="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[48px]">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">📡 Sensor API Keys <span class="text-slate-400 font-normal normal-case">(optional — app works great without sensors)</span></label>
+          <!-- Govee -->
+          <div class="mb-2">
+            <div class="flex gap-2">
+              <input id="key-govee" type="password" autocomplete="off" placeholder="Govee API Key"
+                class="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[48px]">
+              <button id="test-govee-btn" type="button"
+                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl min-h-[48px] min-w-[52px] transition-colors whitespace-nowrap">
+                Test
+              </button>
+            </div>
+            <div id="govee-status" class="hidden mt-1.5 px-3 py-2 rounded-lg text-xs font-medium"></div>
+          </div>
+          <!-- SensorPush -->
+          <div class="mb-1">
             <input id="key-sensorpush" type="password" autocomplete="off" placeholder="SensorPush API Key"
               class="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[48px]">
           </div>
-          <p class="text-xs text-slate-400 mt-1">Enter your key here, then assign devices to specific greenhouses below</p>
+          <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">Govee and SensorPush connect via cloud API — enter your key above, then assign a device to each greenhouse below. Davis, Ecowitt, and SenseCap use local device setup (see walkthrough).</p>
         </div>
 
         <!-- Save Settings -->
@@ -358,11 +369,11 @@
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Sensor Brand</label>
             <select id="h-sensorbrand" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[48px]">
               <option value="none">None (NWS Weather Only)</option>
-              <option value="govee">Govee</option>
-              <option value="sensorpush">SensorPush</option>
-              <option value="davis">Davis WeatherLink</option>
-              <option value="ecowitt">Ecowitt</option>
-              <option value="sensecap">SenseCap</option>
+              <option value="govee">Govee (cloud API — key in Settings)</option>
+              <option value="sensorpush">SensorPush (cloud API — key in Settings)</option>
+              <option value="davis">Davis WeatherLink (local setup — see walkthrough)</option>
+              <option value="ecowitt">Ecowitt (local setup — see walkthrough)</option>
+              <option value="sensecap">SenseCap (local setup — see walkthrough)</option>
             </select>
           </div>
           <div id="sensor-device-row" class="hidden">
@@ -435,6 +446,8 @@ let lastWeatherFetchTime = null; // Timestamp of last successful NWS fetch
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
+// HTML-escape user-controlled strings before innerHTML injection (XSS prevention)
+const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
 const loginView       = $('login-view');
 const appView         = $('app-view');
 const appHeader       = $('app-header');
@@ -502,6 +515,42 @@ window.addEventListener('offline', () => {
     $('house-modal').addEventListener('click', e => { if (e.target === $('house-modal')) closeModal(); });
     $('undo-btn').addEventListener('click', handleUndoDelete);
 
+    // Test Govee connection
+    $('test-govee-btn').addEventListener('click', async () => {
+      const key = $('key-govee').value.trim();
+      const statusEl = $('govee-status');
+      if (!key) {
+        statusEl.textContent = 'Enter a Govee API key first.';
+        statusEl.className = 'mt-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-amber-50 text-amber-800';
+        statusEl.classList.remove('hidden');
+        return;
+      }
+      $('test-govee-btn').textContent = '…';
+      $('test-govee-btn').disabled = true;
+      statusEl.classList.add('hidden');
+      try {
+        const resp = await fetch('/api/govee?action=devices', {
+          headers: { 'x-govee-key': key }
+        });
+        const data = await resp.json();
+        if (resp.ok && data.devices) {
+          const count = data.devices.length;
+          statusEl.textContent = `✅ Govee connected — ${count} device${count !== 1 ? 's' : ''} found.`;
+          statusEl.className = 'mt-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800';
+        } else {
+          statusEl.textContent = `❌ ${data.error || 'Invalid key — check your Govee account.'}`;
+          statusEl.className = 'mt-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-red-50 text-red-700';
+        }
+      } catch {
+        statusEl.textContent = '❌ Could not reach sensor API — make sure you\'re on the live site, not a local file.';
+        statusEl.className = 'mt-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-red-50 text-red-700';
+      }
+      statusEl.classList.remove('hidden');
+      $('test-govee-btn').textContent = 'Test';
+      $('test-govee-btn').disabled = false;
+    });
+
+
     // Detail modal wiring
     $('detail-close-btn').addEventListener('click', closeDetailModal);
     $('house-detail-modal').addEventListener('click', e => { if (e.target === $('house-detail-modal')) closeDetailModal(); });
@@ -543,10 +592,13 @@ window.addEventListener('offline', () => {
     // ── Populate crop checkboxes in modal ──
     // Show common name first, scientific category second
     const friendlyCropNames = {
-      solanaceous:     { primary: 'Tomatoes / Peppers / Eggplant', icon: '🍅' },
-      coldHardyGreens: { primary: 'Lettuce / Spinach / Kale',      icon: '🥬' },
-      cucurbits:       { primary: 'Cucumbers / Melons / Squash',   icon: '🥒' },
-      rootVeggies:     { primary: 'Carrots / Beets / Radishes',    icon: '🥕' }
+      solanaceous:        { primary: 'Tomatoes / Peppers / Eggplant',    icon: '🍅' },
+      coldHardyGreens:    { primary: 'Lettuce / Spinach / Kale',         icon: '🥬' },
+      cucurbits:          { primary: 'Cucumbers / Melons / Squash',      icon: '🥒' },
+      rootVeggies:        { primary: 'Carrots / Beets / Radishes',       icon: '🥕' },
+      floriculture_potted:{ primary: 'Potted Flowers (Geraniums / Petunias)', icon: '🌸' },
+      cut_roses:          { primary: 'Cut Roses',                        icon: '🌹' },
+      nursery_plugs:      { primary: 'Seedling Plugs / Transplants',     icon: '🌱' }
     };
     if (CROP_PROFILES) {
       const cbContainer = $('crop-checkboxes');
@@ -624,6 +676,9 @@ window.addEventListener('offline', () => {
       showGPSCoords(gs.lat, gs.lon);
     }
     $('climate-select').value = gs.climateProfile;
+    // Populate API key fields — password inputs are blank on load even if a key is saved
+    if (gs.apiKeys?.govee)      $('key-govee').value      = gs.apiKeys.govee;
+    if (gs.apiKeys?.sensorpush) $('key-sensorpush').value = gs.apiKeys.sensorpush;
 
     // Try to render from offline cache immediately for instant load feel
     const cache = loadOfflineCache();
@@ -824,8 +879,8 @@ window.addEventListener('offline', () => {
     const weatherTime = lastWeatherFetchTime
       ? lastWeatherFetchTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : null;
-    const badgeText = isLive ? '🟢 Sensor' : weatherTime ? `🦅 ${weatherTime}` : '🦅 NWS';
-    const badgeClass = isLive ? 'bg-emerald-500' : 'bg-sky-500';
+    const badgeText = isLive ? '🟢 Live Sensor' : weatherTime ? `📡 NWS ${weatherTime}` : '📡 NWS Est.';
+    const badgeClass = isLive ? 'bg-emerald-600' : 'bg-slate-500';
 
     // ── VPD ──
     const vpd = intel.trueVpd?.trueVPD_kPa ?? 0;
@@ -874,7 +929,7 @@ window.addEventListener('offline', () => {
       : (topAlert?.msg || 'All systems nominal.').replace('(undefined)', '').replace(/\s+/g,' ').trim();
 
     // ── Crop icons for quick ID ──
-    const cropIconMap = { solanaceous:'🍅', coldHardyGreens:'🥬', cucurbits:'🥒', rootVeggies:'🥕' };
+    const cropIconMap = { solanaceous:'🍅', coldHardyGreens:'🥬', cucurbits:'🥒', rootVeggies:'🥕', floriculture_potted:'🌸', cut_roses:'🌹', nursery_plugs:'🌱' };
     const cropIcons = (house.crops || []).map(c => cropIconMap[c] || '').filter(Boolean).join(' ') || '🌱';
 
     // ── Interior temp ──
@@ -897,7 +952,7 @@ window.addEventListener('offline', () => {
 
       <!-- Name + crops -->
       <div class="px-3 pt-2 pb-1">
-        <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">${house.name || 'Unnamed'}</h3>
+        <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">${esc(house.name || 'Unnamed')}</h3>
         <p class="text-[12px] text-slate-400">${cropIcons}</p>
       </div>
 
@@ -1036,7 +1091,16 @@ window.addEventListener('offline', () => {
       <div class="px-4 py-4 border-b border-slate-100">
         <div class="flex items-center justify-between mb-3">
           <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Right Now</span>
-          <span class="${badgeClass} text-white text-xs font-semibold px-2 py-1 rounded-full">${badgeIcon}</span>
+        </div>
+        <!-- Data source bar -->
+        <div class="${isLive ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-600'} border rounded-xl px-3 py-2 mb-3 flex items-center gap-2 text-xs font-medium">
+          <span class="text-base">${isLive ? '🟢' : '📡'}</span>
+          <span class="flex-1">${isLive
+            ? `Live sensor data · ${house.sensorConfig?.brand?.toUpperCase() || 'sensor'} · ${intel.sensorReading?.tempF ?? ''}°F / ${intel.sensorReading?.rh ?? ''}% RH inside`
+            : weatherTime
+              ? `Estimated from NWS weather · forecast from ${weatherTime} · no sensor active`
+              : 'Estimated from NWS weather · no sensor active'
+          }</span>
         </div>
         <div class="grid grid-cols-3 gap-3">
           <div class="text-center">
@@ -1190,12 +1254,16 @@ window.addEventListener('offline', () => {
     const selectedCrops = [...document.querySelectorAll('.crop-cb:checked')].map(cb => cb.value);
 
     // Auto-derive cropType from checkbox selections:
+    //   floriculture_potted or cut_roses → c3_floriculture (DIF/Botrytis Band logic)
+    //   nursery_plugs → c3_nursery (DLI minimum/damping-off/hardening-off logic)
     //   solanaceous or cucurbits → c3_fruiting (warm-season fruiting crops)
     //   coldHardyGreens or rootVeggies → c3_leafy (cool-season leafy crops)
     //   fallback → c3_fruiting
+    const hasFlori = selectedCrops.some(c => ['floriculture_potted', 'cut_roses'].includes(c));
+    const hasNursery = selectedCrops.some(c => ['nursery_plugs'].includes(c));
     const hasFruiting = selectedCrops.some(c => ['solanaceous', 'cucurbits'].includes(c));
     const hasLeafy = selectedCrops.some(c => ['coldHardyGreens', 'rootVeggies'].includes(c));
-    const autoCropType = hasFruiting ? 'c3_fruiting' : hasLeafy ? 'c3_leafy' : 'c3_fruiting';
+    const autoCropType = hasFlori ? 'c3_floriculture' : hasNursery ? 'c3_nursery' : hasFruiting ? 'c3_fruiting' : hasLeafy ? 'c3_leafy' : 'c3_fruiting';
 
     const houseData = {
       name,

@@ -183,6 +183,96 @@ export const CROP_PROFILES = {
         // RH levels but primarily needs leaf wetness duration.
         // Sclerotinia risk is elevated in beet plantings at >83% RH.
         // Source: Koike et al. (2007)
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // FLORICULTURE — Potted Flowers (Geraniums, Petunias, Lilies, Impatiens)
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // Commercial potted-flower production is physiologically distinct from
+    // vegetable growing. Aesthetic quality (compact form, petal condition) is
+    // the primary market requirement — not yield. Three critical differences:
+    //
+    //   STEM ELONGATION ("stretch") is the #1 quality defect. Prevented via
+    //   Negative DIF: keeping nights cooler than days suppresses internode
+    //   extension. DIF = T_day - T_night. The MORNING DROP (lower 5-15°F
+    //   for 2-3 hrs at dawn) achieves the same result without all-night cooling.
+    //   Source: Research Report §5.1 (DIF/DROP Protocol)
+    //
+    //   BOTRYTIS on petals is more destructive than on vegetable tissue because
+    //   petals ARE the product. Threshold is 80% RH vs. 85% for vegetables.
+    //
+    //   TEMPERATURE RANGE is cooler than tomatoes: 60-72°F day / 50-62°F night.
+    //
+    // Source: MSU Greenhouse Floriculture, Ohio State Extension,
+    //         Deep Research Report §5.1 (DIF), §5.3 (Botrytis Band)
+    //
+    floriculture_potted: {
+        icon: '🌸',
+        label: 'Floriculture — Potted Flowers',
+        minTemp: 60,        // Below 55°F: chilling injury to tropical-origin flowers
+        maxTemp: 72,        // Above 72°F: internode elongation begins; plants get "leggy"
+        nightMinTemp: 50,   // Morning DROP target: drop to ~50°F for 2-3 hrs at dawn
+        nightMaxTemp: 62,   // Negative DIF target: 8-12°F cooler than daytime high
+        botrytisRH: 80      // LOWER than vegetables — petals are the most infection-prone
+                            // surface in the greenhouse. Report §5.3: danger intersection
+                            // is RH > 85-93% AND Temp 55-70°F. 80% is the early-warning trigger.
+                            // Source: MSU Floriculture Extension, Research Report §5.3
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CUT ROSES — Commercial Cut Rose Production
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // Cut roses are the most Botrytis-susceptible crop in this system. Unlike
+    // potted flowers where damaged material can be removed, cut roses have zero
+    // tolerance for gray mold on petals — one outbreak destroys the entire
+    // marketable stem inventory.
+    //
+    // Source: Research Report §3 (Cut Roses trigger table)
+    //
+    cut_roses: {
+        icon: '🌹',
+        label: 'Cut Roses',
+        minTemp: 62,        // Below 60°F: growth rate slows dramatically
+        maxTemp: 70,        // Above 72°F: reduced vase life, petal quality degrades
+        nightMinTemp: 55,   // Rosa hybrids more cold-sensitive than landscape roses
+        nightMaxTemp: 62,   // Negative DIF essential for commercial stem quality
+        botrytisRH: 78      // THE MOST BOTRYTIS-SUSCEPTIBLE crop in this system.
+                            // Research trigger: "RH > 80% → Enable Dehumidification + HAF."
+                            // 78% is 2% below the formal danger threshold — early-warning margin.
+                            // Botrytis spores germinate on petals within 6-8 hrs of free moisture.
+                            // Source: Research Report §3, Cornell Floriculture Program
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // NURSERY PLUGS — Liners, Plugs, Transplant Starts
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // The most physiologically sensitive category in this system. Young tissue:
+    //   - Minimal root system — cannot tolerate drought or waterlogging
+    //   - Low but critical DLI: 5 mol/m²/day minimum (root establishment fails
+    //     below this); 8-12 mol/m²/day target; >15 mol causes foliage burn
+    //
+    // HARDENING-OFF: The plug→field transition is high-risk.
+    // Critical trigger: if temp < 45°F, plugs must NOT go outside.
+    // Duration varies farm to farm — the app provides an alert, not a schedule.
+    //
+    // EC SENSITIVITY: Substrate EC > 1.5 mS/cm → flush with clear water.
+    //
+    // Source: Research Report §5.2 (Hardening-Off), §3 (Nursery Plug triggers)
+    //
+    nursery_plugs: {
+        icon: '🌱',
+        label: 'Nursery / Plugs',
+        minTemp: 62,        // Germination and early rooting requires consistent warmth
+        maxTemp: 75,        // Above 78°F: Pythium/Rhizoctonia (damping-off) explodes
+        nightMinTemp: 55,   // Below 50°F: chilling injury to tender seedling tissue
+        nightMaxTemp: 65,   // Harden-off requires gradual night temp reduction
+        botrytisRH: 82      // Young tissue more Botrytis-susceptible than mature plants.
+                            // Pythium and Rhizoctonia (damping-off) also activate here.
+                            // An entire flat of plugs can be lost within 48 hours of onset.
+                            // Source: Research Report §5.3, MSU Extension Plug Production Guide
     }
 };
 
@@ -3583,6 +3673,92 @@ export const PHOTOSYNTHETIC_CROP_TYPES = {
             'suppressed. This is one reason succulents tolerate extreme heat — they\'re ' +
             'not losing 30% of fixed carbon to RuBisCO\'s oxygenase activity.',
         exampleCrops: []
+    },
+
+    // ──────────────────────────────────────────────────────────────────────
+    // C3 FLORICULTURE — Flowering Ornamentals
+    // ──────────────────────────────────────────────────────────────────────
+    //
+    // Floriculture crops follow the C3 pathway but depart from vegetable logic:
+    //
+    //   1. DIF SENSITIVITY: DIF = T_day - T_night.
+    //      MORNING DROP (lower 5-15°F for 2-3 hrs at dawn) suppresses stem
+    //      elongation without cooling the entire facility all night.
+    //      Source: Research Report §5.1
+    //
+    //   2. LOWER BOTRYTIS THRESHOLD: 80% RH vs. 85% for vegetables.
+    //      Botrytis Band: RH > 85-93% AND Temp 55-70°F AND > 8-12 hrs.
+    //      Source: Research Report §5.3 (Botrytis Band)
+    //
+    //   3. DLI RANGE: 10-18 mol/m²/day. Source: Research Report §2.
+    //
+    c3_floriculture: {
+        label: 'C3 Floriculture (Flowering Ornamentals)',
+        icon: '🌸',
+        pathway: 'C3',
+        description:
+            'Potted flowers, cut roses, bedding plants, geraniums, petunias, impatiens, lilies. ' +
+            'Appearance-quality crops with DIF sensitivity and low Botrytis tolerance.',
+        optimalDayTempF: { min: 60, max: 72 },
+        optimalNightTempF: { min: 50, max: 62 },
+        lightSaturationPPFD: 500,
+        lightCompensationPPFD: 30,
+        co2ResponseCurve: 'linear',
+        co2EnrichmentCeiling: 900,
+        co2EnrichmentYieldBoost: 0.15,
+        waterUseEfficiency: 'moderate',
+        vpdOptimal: { min: 0.5, max: 1.2 },
+        difSensitive: true,             // ENGINE FLAG: enables DIF/Morning DROP alert logic
+        difDropWindowStart: 5,          // Hour to begin Morning DROP (5 AM)
+        difDropWindowEnd: 8,            // Hour to end Morning DROP (8 AM)
+        difDropTargetF: 10,             // °F below daytime setpoint during DROP window
+        photorespirationRisk:
+            'Low. Primary quality threats are Botrytis on petals and stem elongation ' +
+            '("stretch") from inadequate DIF management — not photosynthetic inefficiency.',
+        exampleCrops: ['floriculture_potted', 'cut_roses']
+    },
+
+    // ──────────────────────────────────────────────────────────────────────
+    // C3 NURSERY — Plugs, Liners, Transplant Starts
+    // ──────────────────────────────────────────────────────────────────────
+    //
+    //   1. LOW DLI MINIMUM: Below 5 mol/m²/day root establishment fails.
+    //      Target: 8-12 mol. Excess > 15 mol causes bleaching. (Report §3)
+    //
+    //   2. EC SENSITIVITY: Substrate EC > 1.5 mS/cm → flush with clear water.
+    //      (Research Report §3)
+    //
+    //   3. HARDENING-OFF: Critical trigger: temp < 45°F = plugs stay inside.
+    //      Duration varies farm to farm. App provides alert only. (Report §5.2)
+    //
+    //   4. DAMPING-OFF: Pythium/Rhizoctonia at warmth + high humidity + wet
+    //      substrate. Young roots killed within 24-48 hours of onset.
+    //
+    c3_nursery: {
+        label: 'C3 Nursery (Plugs / Liners)',
+        icon: '🌱',
+        pathway: 'C3',
+        description:
+            'Seedling plugs, liners, transplant starts, bedding plant liners. ' +
+            'Young tissue with EC sensitivity, damping-off risk, and hardening-off requirements.',
+        optimalDayTempF: { min: 62, max: 75 },
+        optimalNightTempF: { min: 55, max: 65 },
+        lightSaturationPPFD: 400,
+        lightCompensationPPFD: 15,
+        co2ResponseCurve: 'linear',
+        co2EnrichmentCeiling: 800,
+        co2EnrichmentYieldBoost: 0.10,
+        waterUseEfficiency: 'high',
+        vpdOptimal: { min: 0.5, max: 1.0 },
+        hardeningOff: true,             // ENGINE FLAG: enables hardening-off frost alert
+        hardeningFrostThresholdF: 45,   // °F — do NOT move outdoors at or below this
+        ecSensitiveThreshold: 1.5,      // mS/cm — flush if substrate EC exceeds this
+        dliMinimum: 5,                  // mol/m²/day — root establishment fails below this
+        dliTarget: { min: 8, max: 12 }, // mol/m²/day — optimal plug development window
+        photorespirationRisk:
+            'Low. Primary threats are damping-off (Pythium/Rhizoctonia at high humidity + warmth) ' +
+            'and EC accumulation in confined substrate volumes.',
+        exampleCrops: ['nursery_plugs']
     }
 };
 
@@ -5204,6 +5380,122 @@ export async function getIntelligentHouseRecommendation(house, weather, appState
                      `Deploy 30-40% shade cloth to prevent bolting. ` +
                      `C3 leafy crops saturate at 400 µmol PPFD.`,
                 source: 'c3_leafy_logic'
+            });
+        }
+    } else if (cropType === 'c3_floriculture') {
+        // ─────────────────────────────────────────────────────────────────
+        //  C3 FLORICULTURE — DIF / MORNING DROP / BOTRYTIS BAND
+        // ─────────────────────────────────────────────────────────────────
+        // Source: Research Report §5.1 (DIF), §5.3 (Botrytis Band), §3
+
+        // ── 1. Morning DIF/DROP window alert ──
+        if (hour >= cropTypeProfile.difDropWindowStart && hour <= cropTypeProfile.difDropWindowEnd) {
+            enrichedAlerts.push({
+                level: 'advisory', icon: '🌡️',
+                msg: `MORNING DIF WINDOW (${hour}:00): Lower temperature ${cropTypeProfile.difDropTargetF}°F ` +
+                     `for 2-3 hrs to suppress stem elongation. Compact floriculture crops ` +
+                     `require Negative DIF or Morning DROP at dawn — the most cost-effective ` +
+                     `morphology control available without chemical growth regulators.`,
+                source: 'floriculture_logic'
+            });
+        }
+
+        // ── 2. VPD stagnation (lower threshold than vegetables — petals) ──
+        if (activeVPD < 0.45) {
+            enrichedAlerts.push({
+                level: 'warning', icon: '🌸',
+                msg: `FLORICULTURE VPD ALERT: VPD ${activeVPD.toFixed(2)} kPa < 0.45. ` +
+                     `Exhaust fans + HAF required. Flower petals at elevated Botrytis risk. ` +
+                     `Tipburn and nutrient stagnation begin at this VPD level.`,
+                source: 'floriculture_logic'
+            });
+        }
+
+        // ── 3. Botrytis Danger Intersection ("Botrytis Band") ──
+        // Report §5.3: RH > 85-93% AND Temp 55-70°F AND Duration > 8-12 hrs
+        // We trigger at 80% RH as early warning before the formal danger zone.
+        const inBotrytisTemp = weatherUsed.tempF >= 55 && weatherUsed.tempF <= 70;
+        const currentRH = weatherUsed.rh || 0;
+        if (currentRH > 80 && inBotrytisTemp) {
+            enrichedAlerts.push({
+                level: 'critical', icon: '🌹',
+                msg: `BOTRYTIS DANGER INTERSECTION: RH ${currentRH}% > 80% in the ` +
+                     `55-70°F pathogen window. Activate dehumidification + HAF fans NOW. ` +
+                     `Botrytis cinerea sporulates on flower petals within 6-8 hours of ` +
+                     `sustained free moisture. This is the #1 crop loss scenario for ` +
+                     `cut roses and potted flowers. Speed of response is the only defense.`,
+                source: 'floriculture_logic'
+            });
+        }
+
+        // ── 4. High VPD — flower abortion risk ──
+        if (activeVPD > 1.5) {
+            enrichedAlerts.push({
+                level: 'advisory', icon: '🥀',
+                msg: `FLORICULTURE HEAT STRESS: VPD ${activeVPD.toFixed(2)} kPa > 1.5. ` +
+                     `Stomatal closure reducing translocation to developing buds. ` +
+                     `Trigger misting or fogging to prevent flower abortion.`,
+                source: 'floriculture_logic'
+            });
+        }
+
+    } else if (cropType === 'c3_nursery') {
+        // ─────────────────────────────────────────────────────────────────
+        //  C3 NURSERY — LOW DLI / DAMPING-OFF / HARDENING-OFF FROST ALERT
+        // ─────────────────────────────────────────────────────────────────
+        // Source: Research Report §3 (Plug triggers), §5.2, §5.3
+
+        // ── 1. Low DLI — root establishment failure threshold ──
+        // Report §3: "Nursery Plugs DLI < 5 mol → Run LEDs for 8-12 mol/d"
+        if (dli.dli_mol < cropTypeProfile.dliMinimum) {
+            enrichedAlerts.push({
+                level: 'warning', icon: '💡',
+                msg: `PLUG LOW DLI: ${dli.dli_mol.toFixed(1)} mol/m²/day < ${cropTypeProfile.dliMinimum} mol minimum ` +
+                     `for plug establishment. Root development is failing at this light level. ` +
+                     `Run supplemental LEDs to reach target ${cropTypeProfile.dliTarget.min}–` +
+                     `${cropTypeProfile.dliTarget.max} mol/m²/day. ` +
+                     `Avoid > 15 mol — causes bleaching and tip burn on tender seedlings.`,
+                source: 'nursery_logic'
+            });
+        }
+
+        // ── 2. Damping-off: warmth + high humidity = Pythium/Rhizoctonia ──
+        const nurseryRH = weatherUsed.rh || 0;
+        if (nurseryRH > 82 && weatherUsed.tempF > 62) {
+            enrichedAlerts.push({
+                level: 'warning', icon: '🦠',
+                msg: `DAMPING-OFF RISK: RH ${nurseryRH}% > 82% and temp ${Math.round(weatherUsed.tempF)}°F > 62°F. ` +
+                     `Pythium and Rhizoctonia thrive at this intersection. Young plug root ` +
+                     `systems can be destroyed within 24-48 hours. Increase air circulation, ` +
+                     `reduce irrigation frequency, allow substrate surface to dry between waterings.`,
+                source: 'nursery_logic'
+            });
+        }
+
+        // ── 3. Hardening-off frost caution ──
+        // Report §5.2: "If Forecast Low < 45°F → do not move plugs outdoors."
+        // Duration varies farm to farm — this is an alert, not a fixed schedule.
+        if (weatherUsed.tempF <= cropTypeProfile.hardeningFrostThresholdF) {
+            enrichedAlerts.push({
+                level: 'critical', icon: '🌡️',
+                msg: `HARDENING FROST CAUTION: Current temp ${Math.round(weatherUsed.tempF)}°F ` +
+                     `≤ ${cropTypeProfile.hardeningFrostThresholdF}°F threshold. Do NOT ` +
+                     `move nursery plugs outdoors. Young tissue suffers irreversible chilling ` +
+                     `injury below 45°F. Wait for consistently warmer nights before advancing ` +
+                     `outdoor exposure. Duration of hardening varies — follow your farm's protocol.`,
+                source: 'nursery_logic'
+            });
+        }
+
+        // ── 4. DLI in optimal range — positive confirmation ──
+        const dliTarget = cropTypeProfile.dliTarget;
+        if (dli.dli_mol >= dliTarget.min && dli.dli_mol <= dliTarget.max) {
+            enrichedAlerts.push({
+                level: 'ok', icon: '🌱',
+                msg: `PLUG DLI OPTIMAL: ${dli.dli_mol.toFixed(1)} mol/m²/day is within the ` +
+                     `${dliTarget.min}–${dliTarget.max} mol target window. ` +
+                     `Root establishment proceeding at optimal light level.`,
+                source: 'nursery_logic'
             });
         }
     }
