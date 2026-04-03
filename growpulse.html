@@ -86,17 +86,11 @@
   .vpd-warning{color:#d97706}
   .vpd-ok{color:#047857}
   .vpd-mite{color:#7c3aed}
-  .alert-critical{background:#fee2e2;border-left:4px solid #dc2626}
-  .alert-warning{background:#fef9c3;border-left:4px solid #ca8a04}
-  .alert-advisory{background:#eff6ff;border-left:4px solid #3b82f6}
-  .alert-ok{background:#f0fdf4;border-left:4px solid #16a34a}
   details summary{cursor:pointer;list-style:none}
   details summary::-webkit-details-marker{display:none}
   .spinner{animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   #login-view{min-height:100dvh}
-  @keyframes skeleton-pulse{0%,100%{opacity:.6}50%{opacity:.3}}
-  .skeleton-pulse{animation:skeleton-pulse 1.5s ease-in-out infinite}
   @keyframes undo-countdown{from{width:100%}to{width:0%}}
   #undo-toast{transition:transform .3s ease, opacity .3s ease}
   #undo-toast.hidden{transform:translateY(100px);opacity:0}
@@ -118,6 +112,20 @@
   #ptr-indicator{transition:transform .2s ease,opacity .2s ease;transform:translateY(-40px);opacity:0}
   #ptr-indicator.visible{transform:translateY(0);opacity:1}
   #ptr-indicator.refreshing .ptr-arrow{animation:spin .8s linear infinite}
+  /* Gemma AI FAB */
+  #ai-fab{transition:transform .2s ease,box-shadow .2s ease}
+  #ai-fab:active{transform:scale(0.9)}
+  @media(prefers-color-scheme:dark){
+    #ai-modal>.bg-emerald-800{background:#064e3b!important}
+    #ai-loading-overlay{background:var(--bg-card)!important}
+    #ai-loading-overlay h3{color:var(--text-primary)!important}
+    #ai-loading-overlay p{color:var(--text-secondary)!important}
+    #ai-chat-interface{background:var(--bg-body)!important}
+    #ai-chat-history .bg-white{background:var(--bg-card)!important;border-color:var(--border)!important}
+    #ai-chat-history .bg-white strong{color:var(--text-primary)!important}
+    #ai-chat-interface>.bg-white{background:var(--bg-card)!important;border-color:var(--border)!important}
+    #ai-modal{background:var(--bg-body)!important}
+  }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -779,6 +787,12 @@ window.addEventListener('offline', () => {
     appView.classList.add('hidden');
     $('login-btn').textContent = 'Sign In to GrowPulse';
     $('login-btn').disabled = false;
+    // Hide AI FAB on login screen
+    const aiFab = $('ai-fab');
+    const aiModal = $('ai-modal');
+    if (aiFab) { aiFab.classList.add('hidden'); aiFab.classList.remove('flex'); }
+    if (aiModal) { aiModal.classList.add('hidden'); aiModal.classList.remove('flex'); }
+    stopAutoRefresh();
   }
 
   function showAppView() {
@@ -791,6 +805,9 @@ window.addEventListener('offline', () => {
     } else {
       readonlyBanner.classList.add('hidden');
     }
+    // Show AI FAB
+    const aiFab = $('ai-fab');
+    if (aiFab) { aiFab.classList.remove('hidden'); aiFab.classList.add('flex'); }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1497,7 +1514,7 @@ window.addEventListener('offline', () => {
   function startAutoRefresh() {
     stopAutoRefresh();
     autoRefreshTimer = setInterval(() => {
-      if (document.visibilityState === 'visible' && !loginView.classList.contains('hidden') === false) {
+      if (document.visibilityState === 'visible' && appView && !appView.classList.contains('hidden')) {
         console.log('[ui] Auto-refresh triggered');
         refreshAll();
       }
@@ -1607,8 +1624,8 @@ try {
      GEMMA FARMHAND — 100% Offline Edge AI
      WebGPU + WebLLM · Gemma 2B · Voice-to-Text
 ═══════════════════════════════════════════════════════════════════════ -->
-<button id="ai-fab" class="fixed bottom-6 right-6 bg-emerald-600 text-white p-4 rounded-full shadow-2xl z-50 flex items-center justify-center text-2xl hover:bg-emerald-700 transition-all border-2 border-white">
-  🤖
+<button id="ai-fab" class="fixed bottom-6 right-6 bg-emerald-600 text-white p-4 rounded-full shadow-2xl z-50 hidden items-center justify-center hover:bg-emerald-700 transition-all border-2 border-white/30 w-14 h-14" aria-label="Open AI Assistant">
+  <i class="fa-solid fa-seedling text-xl"></i>
 </button>
 
 <div id="ai-modal" class="fixed inset-0 bg-slate-50 z-[60] flex-col hidden h-[100dvh] w-full max-w-md mx-auto shadow-2xl">
