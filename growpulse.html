@@ -38,7 +38,50 @@
 
 <style>
   *{box-sizing:border-box}
-  html,body{overflow-x:hidden;background:#f8fafc;font-family:'Inter',system-ui,sans-serif}
+  html,body{overflow-x:hidden;background:var(--bg-body);font-family:'Inter',system-ui,sans-serif;color:var(--text-primary)}
+  /* ── Light mode (default) ── */
+  :root{
+    --bg-body:#f8fafc;--bg-card:#ffffff;--bg-input:#ffffff;
+    --text-primary:#1e293b;--text-secondary:#64748b;--text-dim:#94a3b8;
+    --border:#e2e8f0;--border-light:#f1f5f9;
+    --bg-modal:#ffffff;--bg-detail:#ffffff;
+    --bg-settings:#f8fafc;
+  }
+  /* ── Dark mode (auto) ── */
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg-body:#0f172a;--bg-card:#1e293b;--bg-input:#334155;
+      --text-primary:#e2e8f0;--text-secondary:#94a3b8;--text-dim:#64748b;
+      --border:#334155;--border-light:#1e293b;
+      --bg-modal:#1e293b;--bg-detail:#1e293b;
+      --bg-settings:#1e293b;
+    }
+    body{background:var(--bg-body)}
+    /* Tile overrides */
+    .house-tile{background:var(--bg-card)!important;border-color:var(--border)!important}
+    .house-tile h3{color:var(--text-primary)!important}
+    /* Alert cards */
+    .alert-card{border-color:var(--border)!important}
+    /* Inputs & forms */
+    input,select,textarea{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border)!important}
+    /* Modal */
+    #house-modal>div,#house-detail-modal>div{background:var(--bg-modal)!important}
+    #house-detail-content>div{border-color:var(--border)!important}
+    /* Settings accordion */
+    details{background:var(--bg-settings)!important;border-color:var(--border)!important}
+    details summary{color:var(--text-primary)!important}
+    /* Text overrides for dark */
+    .text-slate-700,.text-slate-800,.text-slate-900{color:var(--text-primary)!important}
+    .text-slate-500,.text-slate-600{color:var(--text-secondary)!important}
+    .text-slate-400{color:var(--text-dim)!important}
+    .bg-white{background:var(--bg-card)!important}
+    .bg-slate-50,.bg-slate-100{background:var(--bg-body)!important}
+    .border-slate-100,.border-slate-200{border-color:var(--border)!important}
+    /* Login view — stays dark intentionally */
+    #login-view .bg-white{background:#ffffff!important}
+    #login-view .text-slate-900{color:#1e293b!important}
+    #login-view input{background:#ffffff!important;color:#1e293b!important}
+  }
   .vpd-critical{color:#dc2626}
   .vpd-warning{color:#d97706}
   .vpd-ok{color:#047857}
@@ -71,6 +114,10 @@
   .alert-card.dismissing{transform:translateX(-120%);opacity:0}
   @keyframes alert-slide-in{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
   .alert-card{animation:alert-slide-in .3s ease}
+  /* Pull-to-refresh */
+  #ptr-indicator{transition:transform .2s ease,opacity .2s ease;transform:translateY(-40px);opacity:0}
+  #ptr-indicator.visible{transform:translateY(0);opacity:1}
+  #ptr-indicator.refreshing .ptr-arrow{animation:spin .8s linear infinite}
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -252,11 +299,18 @@
       Add Greenhouse Structure
     </button>
 
+    <!-- ═══ Pull-to-refresh indicator ═══ -->
+    <div id="ptr-indicator" class="flex items-center justify-center py-2 text-sm text-slate-400 font-medium">
+      <i class="fa-solid fa-arrow-down ptr-arrow mr-2"></i>
+      <span class="ptr-text">Pull to refresh</span>
+    </div>
+
     <!-- ═══ FARM REFRESH ═══ -->
     <button id="refresh-btn" class="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 min-h-[48px] transition-colors">
       <i class="fa-solid fa-rotate-right"></i>
       🌡 Refresh Weather & Alerts
     </button>
+    <div id="last-updated" class="text-center text-[11px] text-slate-400 mt-1 hidden"></div>
 
     <!-- NWS Offline Warning (hidden by default) -->
     <div id="nws-offline-banner" class="hidden bg-amber-100 border border-amber-300 rounded-xl px-4 py-3 text-sm text-amber-800 font-medium flex items-center gap-2">
@@ -1435,6 +1489,111 @@ window.addEventListener('offline', () => {
       if (arrow) arrow.style.transform = e.target.open ? 'rotate(180deg)' : '';
     }
   }, true);
+
+  // ── Auto-refresh timer (15 min, pauses when tab hidden) ─────────────────
+  let autoRefreshTimer = null;
+  const AUTO_REFRESH_MS = 15 * 60 * 1000; // 15 minutes
+
+  function startAutoRefresh() {
+    stopAutoRefresh();
+    autoRefreshTimer = setInterval(() => {
+      if (document.visibilityState === 'visible' && !loginView.classList.contains('hidden') === false) {
+        console.log('[ui] Auto-refresh triggered');
+        refreshAll();
+      }
+    }, AUTO_REFRESH_MS);
+  }
+  function stopAutoRefresh() {
+    if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  }
+
+  // Pause timer when tab is hidden, resume when visible
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && appView && !appView.classList.contains('hidden')) {
+      // Refresh immediately if last update was >15 min ago
+      if (lastWeatherFetchTime && (Date.now() - lastWeatherFetchTime.getTime()) > AUTO_REFRESH_MS) {
+        refreshAll();
+      }
+      startAutoRefresh();
+    } else {
+      stopAutoRefresh();
+    }
+  });
+
+  // ── "Last updated" timestamp ────────────────────────────────────────────
+  function updateLastUpdatedLabel() {
+    const el = $('last-updated');
+    if (!lastWeatherFetchTime) { el.classList.add('hidden'); return; }
+    const time = lastWeatherFetchTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    el.textContent = `Last updated ${time} · auto-refreshes every 15 min`;
+    el.classList.remove('hidden');
+  }
+
+  // Patch refreshAll to update label + restart timer
+  const _originalRefreshAll = refreshAll;
+  refreshAll = async function() {
+    const result = await _originalRefreshAll();
+    updateLastUpdatedLabel();
+    startAutoRefresh(); // reset the 15-min countdown
+    return result;
+  };
+
+  // ── Pull-to-refresh (mobile touch) ──────────────────────────────────────
+  (function initPullToRefresh() {
+    const indicator = $('ptr-indicator');
+    const textEl = indicator.querySelector('.ptr-text');
+    let startY = 0, pulling = false, triggered = false;
+    const THRESHOLD = 80; // px to pull before triggering
+
+    document.addEventListener('touchstart', e => {
+      // Only activate at top of page
+      if (window.scrollY > 5 || appView.classList.contains('hidden')) return;
+      startY = e.touches[0].clientY;
+      pulling = true;
+      triggered = false;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+      if (!pulling) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 10 && dy < 150) {
+        indicator.classList.add('visible');
+        const progress = Math.min(dy / THRESHOLD, 1);
+        indicator.style.transform = `translateY(${Math.min(dy * 0.4, 30)}px)`;
+        indicator.style.opacity = progress;
+        textEl.textContent = dy >= THRESHOLD ? 'Release to refresh' : 'Pull to refresh';
+        if (dy >= THRESHOLD) triggered = true;
+        else triggered = false;
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      if (!pulling) return;
+      pulling = false;
+      if (triggered) {
+        indicator.classList.add('refreshing');
+        textEl.textContent = 'Refreshing…';
+        refreshAll().finally(() => {
+          indicator.classList.remove('visible', 'refreshing');
+          indicator.style.transform = '';
+          indicator.style.opacity = '';
+        });
+      } else {
+        indicator.classList.remove('visible');
+        indicator.style.transform = '';
+        indicator.style.opacity = '';
+      }
+    });
+  })();
+
+  // ── Service Worker registration ─────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      console.log('[sw] registered, scope:', reg.scope);
+    }).catch(err => {
+      console.warn('[sw] registration failed:', err.message);
+    });
+  }
 
 // ── 🚀 Entry point ──────────────────────────────────────────────────────────
 try {

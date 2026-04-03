@@ -13,6 +13,7 @@
 !api/
 !api/**
 !vercel.json
+!sw.js
 
 # Never commit environment or secret files
 .env
