@@ -1,6 +1,6 @@
 // GrowPulse Service Worker — v1
 // Caches app shell for offline use + reliable PWA install prompt
-const CACHE_NAME = 'growpulse-v2';
+const CACHE_NAME = 'growpulse-v3';
 const APP_SHELL = [
   './',
   './growpulse.html',
@@ -37,12 +37,11 @@ self.addEventListener('fetch', e => {
   // Skip non-GET requests
   if (e.request.method !== 'GET') return;
 
-  // Network-first for APIs (NWS, Firebase, Govee)
+  // Pass-through for external CDNs (Firebase, Tailwind, FontAwesome, NWS, Govee)
+  // Do NOT intercept — let the browser fetch normally so CDN failures
+  // don't return undefined from an empty cache and crash the page.
   if (url.hostname !== location.hostname) {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
-    );
-    return;
+    return; // browser handles natively
   }
 
   // Cache-first for app shell, network-first for everything else
