@@ -1738,6 +1738,26 @@ try {
 
   let engine = null;
 
+  // ── WebGPU Capability Gate ──────────────────────────────────────────────
+  // Older devices (pre-2020 phones, Firefox, some Safari versions) lack
+  // WebGPU. Detect early so the main app never crashes.
+  if (!navigator.gpu) {
+    downloadBtn.disabled = true;
+    downloadBtn.className = 'w-full bg-slate-400 text-white font-bold py-4 px-4 rounded-xl shadow-sm text-base cursor-not-allowed';
+    downloadBtn.innerHTML = '<i class="fa-solid fa-microchip-ai mr-2"></i>WebGPU Not Available';
+    progressText.innerHTML = 'Your device hardware does not support local WebGPU AI.<br>The core physics engine remains fully active.';
+    progressText.classList.remove('text-emerald-600');
+    progressText.classList.add('text-slate-500');
+
+    // FAB still opens the modal so the user sees the explanation
+    fab.addEventListener('click', () => { modal.classList.remove('hidden'); modal.classList.add('flex'); });
+    closeBtn.addEventListener('click', () => { modal.classList.add('hidden'); modal.classList.remove('flex'); });
+
+    // Stop here — do not wire chat, voice, or download listeners
+    // The rest of the app continues running normally.
+  } else {
+  // ── WebGPU Available — wire full AI interface ──────────────────────────
+
   // Toggle Modal
   fab.addEventListener('click', () => { modal.classList.remove('hidden'); modal.classList.add('flex'); });
   closeBtn.addEventListener('click', () => { modal.classList.add('hidden'); modal.classList.remove('flex'); });
@@ -1879,6 +1899,8 @@ try {
   } else {
     micBtn.style.display = 'none'; // Hide if browser doesn't support voice
   }
+
+  } // end WebGPU else block
 </script>
 
 </body>
