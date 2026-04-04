@@ -1707,14 +1707,16 @@ try {
       </div>
     </div>
 
-    <div class="bg-white border-t border-slate-200 p-3 flex items-center space-x-2 shrink-0 pb-safe">
-      <button id="ai-mic-btn" class="bg-slate-100 text-slate-600 p-3 rounded-full text-xl hover:bg-red-100 hover:text-red-600 transition-colors w-12 h-12 flex items-center justify-center shrink-0">
-        🎙️
-      </button>
-      <input type="text" id="ai-text-input" class="flex-1 border border-slate-300 rounded-full px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 bg-slate-50" placeholder="Ask about VPD...">
-      <button id="ai-send-btn" class="bg-emerald-600 text-white p-3 rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-md">
-        ➤
-      </button>
+    <div class="bg-white border-t border-slate-200 p-3 shrink-0" style="padding-bottom:max(12px, env(safe-area-inset-bottom))">
+      <div class="flex items-center space-x-2">
+        <button id="ai-mic-btn" class="bg-slate-100 text-slate-600 p-3 rounded-full text-xl hover:bg-red-100 hover:text-red-600 transition-all w-12 h-12 flex items-center justify-center shrink-0">
+          🎙️
+        </button>
+        <input type="text" id="ai-text-input" class="flex-1 border border-slate-300 rounded-full px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 bg-slate-50" placeholder="Ask about VPD...">
+        <button id="ai-send-btn" class="bg-emerald-600 text-white p-3 rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-md">
+          ➤
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -1869,7 +1871,7 @@ try {
     recognition.interimResults = false;
 
     micBtn.addEventListener('click', () => {
-      micBtn.classList.add('bg-red-500', 'text-white', 'animate-pulse');
+      micBtn.classList.add('bg-red-600', 'text-white', 'animate-pulse', 'ring-4', 'ring-red-500/50');
       micBtn.classList.remove('bg-slate-100', 'text-slate-600');
       textInput.placeholder = "Listening...";
       recognition.start();
@@ -1882,7 +1884,7 @@ try {
     };
 
     const resetMicUI = () => {
-      micBtn.classList.remove('bg-red-500', 'text-white', 'animate-pulse');
+      micBtn.classList.remove('bg-red-600', 'text-white', 'animate-pulse', 'ring-4', 'ring-red-500/50');
       micBtn.classList.add('bg-slate-100', 'text-slate-600');
     };
 
