@@ -1268,8 +1268,14 @@ window.addEventListener('offline', () => {
       a.msg?.toLowerCase().includes('light integral')
     ).slice(0, 2);
 
+    const detailAlertStyles = {
+      critical: 'bg-red-50 border-l-4 border-red-500',
+      warning:  'bg-amber-50 border-l-4 border-amber-400',
+      advisory: 'bg-blue-50 border-l-4 border-blue-400',
+      ok:       'bg-emerald-50 border-l-4 border-emerald-400'
+    };
     const enrichedHTML = actionableAlerts.map(a => `
-      <div class="alert-${a.level} px-3 py-2 rounded-lg text-xs text-slate-800 leading-snug">
+      <div class="${detailAlertStyles[a.level] || detailAlertStyles.advisory} px-3 py-2 rounded-lg text-xs text-slate-800 leading-snug">
         <span class="font-semibold">${a.icon}</span> ${truncateAlert(a.msg)}
       </div>`).join('');
 
@@ -1305,7 +1311,7 @@ window.addEventListener('offline', () => {
           <div class="text-center">
             <div class="text-3xl font-black ${vpdClass}">${vpd.toFixed(2)}</div>
             <div class="text-xs font-semibold ${vpdClass} mt-0.5">${vpdLabel}</div>
-            <div class="text-xs text-slate-400">Air Moisture</div>
+            <div class="text-xs text-slate-400">True VPD kPa</div>
           </div>
           <div class="text-center">
             <div class="text-3xl font-black text-slate-700">${intel.rec?.estTemp ?? wx.tempF}°</div>
