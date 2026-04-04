@@ -85,6 +85,7 @@
   .vpd-critical{color:#dc2626}
   .vpd-warning{color:#d97706}
   .vpd-ok{color:#047857}
+  .vpd-high{color:#ea580c}
   .vpd-mite{color:#7c3aed}
   details summary{cursor:pointer;list-style:none}
   details summary::-webkit-details-marker{display:none}
@@ -1104,12 +1105,18 @@ window.addEventListener('offline', () => {
       : null;
     const badgeText = isLive ? '🟢 Live' : weatherTime ? `${weatherTime}` : 'NWS';
 
-    // ── VPD ──
+    // ── VPD — crop-specific color bands ──
     const vpd = intel.trueVpd?.trueVPD_kPa ?? 0;
-    let vpdClass = 'vpd-ok';
-    if (vpd < 0.2)       { vpdClass = 'vpd-critical'; }
-    else if (vpd < 0.43) { vpdClass = 'vpd-warning'; }
-    else if (vpd > 2.0)  { vpdClass = 'vpd-mite'; }
+    // Get this crop's optimal VPD range from engine profiles
+    const cropProf = window.app.PHOTOSYNTHETIC_CROP_TYPES?.[house.cropType] || {};
+    const vpdMin = cropProf.vpdOptimal?.min ?? 0.43;  // fallback: generic low
+    const vpdMax = cropProf.vpdOptimal?.max ?? 1.6;   // fallback: generic high
+    let vpdClass = 'vpd-ok';  // green = within crop's sweet spot
+    if      (vpd < 0.2)          { vpdClass = 'vpd-critical'; }  // danger: disease condensation
+    else if (vpd < vpdMin)       { vpdClass = 'vpd-warning';  }  // low for this crop
+    else if (vpd > 2.0)          { vpdClass = 'vpd-mite';     }  // spider mite pressure
+    else if (vpd > vpdMax)       { vpdClass = 'vpd-high';     }  // high for this crop (amber)
+    // vpd-high is between crop max and mite threshold — not dangerous, but nudging high
 
     // ── Priority ──
     const topAlert = intel.rec?.alerts?.[0];
@@ -1191,7 +1198,10 @@ window.addEventListener('offline', () => {
       </div>
     `;
 
-    tile.addEventListener('click', () => openDetailModal(house.id));
+    tile.addEventListener('click', () => {
+      if (navigator.vibrate) navigator.vibrate(10); // haptic feedback
+      openDetailModal(house.id);
+    });
     tile.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal(house.id); } });
 
     housesContainer.appendChild(tile);
@@ -1229,11 +1239,14 @@ window.addEventListener('offline', () => {
     const badgeIcon = isLive ? '🟢 Live Sensor' : weatherTime ? `🦅 NWS · ${weatherTime}` : '🦅 NWS Fallback';
 
     const vpd = intel.trueVpd?.trueVPD_kPa ?? 0;
+    const detailCropProf = A.PHOTOSYNTHETIC_CROP_TYPES?.[house.cropType] || {};
+    const detailVpdMin = detailCropProf.vpdOptimal?.min ?? 0.43;
+    const detailVpdMax = detailCropProf.vpdOptimal?.max ?? 1.6;
     let vpdClass = 'vpd-ok', vpdLabel = 'Optimal';
-    if (vpd < 0.2)       { vpdClass = 'vpd-critical'; vpdLabel = 'DANGER'; }
-    else if (vpd < 0.43) { vpdClass = 'vpd-warning';  vpdLabel = 'Low'; }
-    else if (vpd > 2.0)  { vpdClass = 'vpd-mite';     vpdLabel = 'Mite Risk'; }
-    else if (vpd > 1.6)  { vpdClass = 'vpd-ok';        vpdLabel = 'High'; }
+    if      (vpd < 0.2)           { vpdClass = 'vpd-critical'; vpdLabel = 'DANGER'; }
+    else if (vpd < detailVpdMin)  { vpdClass = 'vpd-warning';  vpdLabel = 'Too Low'; }
+    else if (vpd > 2.0)           { vpdClass = 'vpd-mite';     vpdLabel = 'Mite Risk'; }
+    else if (vpd > detailVpdMax)  { vpdClass = 'vpd-high';     vpdLabel = 'Running High'; }
 
     const topAlert = intel.rec?.alerts?.[0];
     const noCropsConfigured = !house.crops?.length;
@@ -1780,17 +1793,56 @@ try {
   } else {
   // ── WebGPU Available — wire full AI interface ──────────────────────────
 
-  // Toggle Modal
-  fab.addEventListener('click', () => { modal.classList.remove('hidden'); modal.classList.add('flex'); });
+  // Toggle Modal — restore chat history from session on open
+  fab.addEventListener('click', () => {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    restoreChatHistory();
+  });
   closeBtn.addEventListener('click', () => { modal.classList.add('hidden'); modal.classList.remove('flex'); });
+
+  // Chat history persistence via sessionStorage
+  const CHAT_KEY = 'growpulse_gemma_chat';
+
+  function saveChatHistory() {
+    try {
+      const msgs = [...chatHistory.querySelectorAll('[data-role]')].map(el => ({
+        role: el.dataset.role,
+        html: el.innerHTML,
+        cls:  el.className
+      }));
+      sessionStorage.setItem(CHAT_KEY, JSON.stringify(msgs));
+    } catch(e) {}
+  }
+
+  function restoreChatHistory() {
+    try {
+      const raw = sessionStorage.getItem(CHAT_KEY);
+      if (!raw) return;
+      const msgs = JSON.parse(raw);
+      if (!msgs.length) return;
+      // Only restore if chat is still showing the default welcome message
+      if (chatHistory.children.length > 1) return;
+      msgs.forEach(m => {
+        const div = document.createElement('div');
+        div.className = m.cls;
+        div.dataset.role = m.role;
+        div.innerHTML = m.html;
+        chatHistory.appendChild(div);
+      });
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    } catch(e) {}
+  }
 
   function addMessage(sender, text) {
     const msgDiv = document.createElement('div');
     const isBot = sender === 'Gemma';
     msgDiv.className = `p-3 rounded-lg text-sm w-5/6 shadow-sm ${isBot ? 'bg-white border border-slate-200 text-slate-800 self-start' : 'bg-emerald-600 text-white self-end ml-auto'}`;
+    msgDiv.dataset.role = isBot ? 'ai' : 'user';
     msgDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
     chatHistory.appendChild(msgDiv);
     chatHistory.scrollTop = chatHistory.scrollHeight;
+    saveChatHistory();
     return msgDiv;
   }
 
