@@ -1147,8 +1147,9 @@ window.addEventListener('offline', () => {
     const cropIconMap = { solanaceous:'🍅', coldHardyGreens:'🥬', cucurbits:'🥒', rootVeggies:'🥕', floriculture_potted:'🌸', cut_roses:'🌹', nursery_plugs:'🌱' };
     const cropIcons = (house.crops || []).map(c => cropIconMap[c] || '').filter(Boolean).join('');
 
-    // ── Interior temp ──
+    // ── Interior temp + humidity ──
     const interiorTemp = intel.rec?.estTemp ?? wx.tempF;
+    const estRH = wx.rh ?? '—';
 
     // ── Build tile ──
     const tile = document.createElement('div');
@@ -1174,13 +1175,18 @@ window.addEventListener('offline', () => {
       <!-- Numbers -->
       <div class="px-3 pb-3 pt-1 flex items-end gap-1 mt-auto">
         <div class="flex-1 text-center">
-          <div class="text-[28px] font-black ${vpdClass} leading-none tracking-tight">${vpd.toFixed(2)}</div>
+          <div class="text-[26px] font-black ${vpdClass} leading-none tracking-tight">${vpd.toFixed(2)}</div>
           <div class="text-[9px] text-slate-400 mt-1 uppercase tracking-wider">VPD</div>
         </div>
         <div class="w-px h-8 bg-slate-100 shrink-0"></div>
         <div class="flex-1 text-center">
-          <div class="text-[28px] font-black text-slate-700 leading-none tracking-tight">${interiorTemp}°</div>
+          <div class="text-[26px] font-black text-slate-700 leading-none tracking-tight">${interiorTemp}°</div>
           <div class="text-[9px] text-slate-400 mt-1 uppercase tracking-wider">°F</div>
+        </div>
+        <div class="w-px h-8 bg-slate-100 shrink-0"></div>
+        <div class="flex-1 text-center">
+          <div class="text-[26px] font-black text-sky-600 leading-none tracking-tight">${estRH}%</div>
+          <div class="text-[9px] text-slate-400 mt-1 uppercase tracking-wider">RH</div>
         </div>
       </div>
     `;
@@ -1795,8 +1801,8 @@ try {
     downloadBtn.disabled = true;
     downloadBtn.innerText = "Initializing Engine...";
     try {
-      // Use the optimized 2B parameter Gemma model
-      const selectedModel = "gemma-2b-it-q4f16_1-MLC";
+      // Use the Gemma 2 (2B parameter) model — correct MLC model ID
+      const selectedModel = "Gemma-2-2B-it-q4f16_1-MLC";
       engine = await webllm.CreateMLCEngine(selectedModel, {
         initProgressCallback: (progress) => {
           progressText.innerText = progress.text;
@@ -1808,7 +1814,7 @@ try {
       chatInterface.classList.remove('hidden');
       chatInterface.classList.add('flex');
     } catch (err) {
-      progressText.innerText = "Error: Your device/browser may not support WebGPU. " + err.message;
+      progressText.innerHTML = "<strong>WebGPU Error:</strong> Your browser or device may not support this model.<br><br>" + err.message + "<br><br><em>Try Chrome 113+ on a device with 4GB+ RAM.</em>";
       downloadBtn.disabled = false;
       downloadBtn.innerText = "Retry Download";
     }
