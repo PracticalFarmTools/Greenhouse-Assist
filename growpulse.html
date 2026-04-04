@@ -1755,8 +1755,8 @@ try {
 </div>
 
 <script type="module">
-  // Import WebLLM via CDN
-  import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+  // WebLLM — pinned version for stability on mobile (avoid esm.run unpinned)
+  import * as webllm from "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm";
 
   // UI Elements
   const fab = document.getElementById('ai-fab');
@@ -1848,27 +1848,34 @@ try {
 
   // 1. Initialize Gemma via WebGPU
   downloadBtn.addEventListener('click', async () => {
-    // Confirm before 1.5GB download — protect cellular data users
-    if (!confirm('This will download the Gemma AI model (~1.5 GB).\n\nWe recommend using WiFi. Continue?')) return;
+    // Confirm before ~1.5GB download — protect cellular data users
+    if (!confirm('This will download the Gemma AI model (~1.5 GB).\n\nBest on WiFi. Continue?')) return;
     downloadBtn.disabled = true;
-    downloadBtn.innerText = "Initializing Engine...";
+    downloadBtn.innerText = 'Downloading AI...';
+    progressText.innerText = 'Connecting to model server...';
     try {
-      // Use the Gemma 2 (2B parameter) model — correct MLC model ID
-      const selectedModel = "Gemma-2-2B-it-q4f16_1-MLC";
+      // Verified model ID — lowercase, gemma-2b (not Gemma-2-2B)
+      const selectedModel = 'gemma-2b-it-q4f16_1-MLC';
       engine = await webllm.CreateMLCEngine(selectedModel, {
-        initProgressCallback: (progress) => {
-          progressText.innerText = progress.text;
+        initProgressCallback: (p) => {
+          // Show full progress text: percentage + current file name
+          progressText.innerText = p.text || 'Loading...';
         }
       });
-      // Initialization complete
       loadingOverlay.classList.add('hidden');
       loadingOverlay.classList.remove('flex');
       chatInterface.classList.remove('hidden');
       chatInterface.classList.add('flex');
     } catch (err) {
-      progressText.innerHTML = "<strong>WebGPU Error:</strong> Your browser or device may not support this model.<br><br>" + err.message + "<br><br><em>Try Chrome 113+ on a device with 4GB+ RAM.</em>";
+      // Surface the exact error so we can diagnose
+      const errName = err?.name || 'Error';
+      const errMsg  = err?.message || String(err);
+      progressText.innerHTML =
+        `<strong>${errName}:</strong><br>${errMsg}<br><br>` +
+        `<small>Device: ${navigator.userAgent.replace(/\(.*?\)/g,'').trim().slice(0,80)}<br>` +
+        `WebGPU: ${!!navigator.gpu} · Chrome recommended (v121+)</small>`;
       downloadBtn.disabled = false;
-      downloadBtn.innerText = "Retry Download";
+      downloadBtn.innerText = 'Retry Download';
     }
   });
 
