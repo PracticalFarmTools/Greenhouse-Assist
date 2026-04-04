@@ -91,6 +91,8 @@
   .spinner{animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   #login-view{min-height:100dvh}
+  @keyframes skeleton-pulse{0%,100%{opacity:.6}50%{opacity:.3}}
+  .skeleton-pulse{animation:skeleton-pulse 1.5s ease-in-out infinite}
   @keyframes undo-countdown{from{width:100%}to{width:0%}}
   #undo-toast{transition:transform .3s ease, opacity .3s ease}
   #undo-toast.hidden{transform:translateY(100px);opacity:0}
@@ -849,6 +851,7 @@ window.addEventListener('offline', () => {
     setSyncStatus('saving');
     const synced = await A.syncFarmToCloud(A.state);
     setSyncStatus(synced ? 'saved' : 'error');
+    publishFarmState();
     refreshAll();
   }
 
@@ -921,6 +924,54 @@ window.addEventListener('offline', () => {
     // Close detail modal if open — it would show stale data after refresh
     closeDetailModal();
     renderHouses();
+
+    // Publish sanitized state for Gemma sidecar
+    publishFarmState();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PUBLISH FARM STATE (secure handshake for AI sidecar)
+  // ─────────────────────────────────────────────────────────────────────────
+  // Publishes a read-only, sanitized copy of the farm state to a well-known
+  // global. The Gemma sidecar reads this — never the raw window.app.state.
+  function publishFarmState() {
+    try {
+      const A = window.app;
+      const st = A.state;
+      // Only expose agronomic data — no secrets, no PII
+      window.practicalFarmState = {
+        climateProfile: st.globalSettings?.climateProfile || '',
+        lat: st.globalSettings?.lat,
+        lon: st.globalSettings?.lon,
+        houses: (st.houses || []).map(h => ({
+          id: h.id,
+          name: h.name,
+          width: h.width,
+          length: h.length,
+          glazing: h.glazing,
+          heating: h.heating,
+          orientation: h.orientation,
+          cropType: h.cropType,
+          crops: h.crops,
+          plantDate: h.plantDate,
+          growthPhase: h.growthPhase,
+          gddThrips: h.gddThrips,
+          gddWhitefly: h.gddWhitefly,
+          leafWetnessHours: h.leafWetnessHours
+          // NOTE: sensorConfig, tasks, irrigationLogs, soilTests,
+          //       notes, and all PII intentionally excluded
+        })),
+        weather: currentWeather?.current ? {
+          tempF: currentWeather.current.tempF,
+          rh: currentWeather.current.rh,
+          windMph: currentWeather.current.windMph,
+          skyCover: currentWeather.current.skyCover
+        } : null,
+        _publishedAt: new Date().toISOString()
+      };
+    } catch (e) {
+      // Fail silently — AI context is optional
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1451,6 +1502,7 @@ window.addEventListener('offline', () => {
     setSyncStatus('saving');
     const synced = await A.syncFarmToCloud(A.state);
     setSyncStatus(synced ? 'saved' : 'error');
+    publishFarmState();
     renderHouses();
   }
 
@@ -1724,29 +1776,45 @@ try {
     }
   });
 
-  // 2. Chat Logic (Context-Aware Bridge)
+  // 2. Chat Logic — Secure Context Handshake
+  // getSanitizedContext() reads ONLY the published agronomic state.
+  // It NEVER touches window.app.state, firebaseConfig, or raw auth data.
+  function getSanitizedContext() {
+    try {
+      const farmState = window.practicalFarmState;
+      if (!farmState) return 'No farm data available yet. Ask the user to refresh.';
+
+      // Defense-in-depth: even though publishFarmState() already strips secrets,
+      // we verify the published object contains NO sensitive keys.
+      const safe = JSON.parse(JSON.stringify(farmState));
+
+      // Hard-delete anything that should never reach the AI
+      const FORBIDDEN_KEYS = ['apiKeys', 'firebaseConfig', 'uid', 'email', 'password', 'token', 'secret'];
+      function scrub(obj) {
+        if (!obj || typeof obj !== 'object') return;
+        for (const key of Object.keys(obj)) {
+          if (FORBIDDEN_KEYS.includes(key)) {
+            delete obj[key];
+          } else if (typeof obj[key] === 'object') {
+            scrub(obj[key]);
+          }
+        }
+      }
+      scrub(safe);
+
+      return JSON.stringify(safe);
+    } catch (e) {
+      return 'Error reading farm state.';
+    }
+  }
+
   async function handleChat(userText) {
     if (!userText || !engine) return;
     
     addMessage('You', userText);
     textInput.value = '';
     
-    // THE BRIDGE: Read live farm state from the existing GrowPulse engine
-    let farmContext = "Unknown state.";
-    try {
-      const appState = window.app?.state || {};
-      
-      // Strip out API keys before passing to local AI context
-      const safeState = JSON.parse(JSON.stringify(appState));
-      if (safeState.globalSettings?.apiKeys) {
-        delete safeState.globalSettings.apiKeys;
-      }
-      // Strip user PII
-      if (safeState.user) {
-        safeState.user = { displayName: safeState.user.displayName };
-      }
-      farmContext = JSON.stringify(safeState);
-    } catch (e) { console.warn("[gemma] Could not read app state:", e.message); }
+    const farmContext = getSanitizedContext();
 
     const systemPrompt = `You are an expert Agronomic AI integrated into a high-tunnel greenhouse app running offline on a farmer's device. 
     Current Farm Context: ${farmContext}. 
