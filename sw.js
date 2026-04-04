@@ -1,6 +1,6 @@
 // GrowPulse Service Worker — v1
 // Caches app shell for offline use + reliable PWA install prompt
-const CACHE_NAME = 'growpulse-v1';
+const CACHE_NAME = 'growpulse-v2';
 const APP_SHELL = [
   './',
   './growpulse.html',

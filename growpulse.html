@@ -132,6 +132,14 @@
 </head>
 <body class="bg-slate-50 text-slate-800">
 
+<noscript>
+  <div style="max-width:420px;margin:60px auto;padding:32px;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.12);text-align:center;font-family:system-ui,sans-serif">
+    <div style="font-size:48px;margin-bottom:16px">🌱</div>
+    <h1 style="font-size:20px;font-weight:700;color:#1e293b;margin:0 0 8px">JavaScript Required</h1>
+    <p style="font-size:14px;color:#64748b;line-height:1.5">GrowPulse needs JavaScript to run the greenhouse physics engine and connect to your sensors. Please enable JavaScript in your browser settings and reload.</p>
+  </div>
+</noscript>
+
 <!-- ═══════════════════════════════════════
      LOGIN VIEW
 ═══════════════════════════════════════ -->
@@ -1782,6 +1790,8 @@ try {
 
   // 1. Initialize Gemma via WebGPU
   downloadBtn.addEventListener('click', async () => {
+    // Confirm before 1.5GB download — protect cellular data users
+    if (!confirm('This will download the Gemma AI model (~1.5 GB).\n\nWe recommend using WiFi. Continue?')) return;
     downloadBtn.disabled = true;
     downloadBtn.innerText = "Initializing Engine...";
     try {
