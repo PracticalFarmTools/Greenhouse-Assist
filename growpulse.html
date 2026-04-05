@@ -289,6 +289,14 @@
           <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">Govee and SensorPush connect via cloud API — enter your key above, then assign a device to each greenhouse below. Davis, Ecowitt, and SenseCap use local device setup (see walkthrough).</p>
         </div>
 
+        <!-- AI Assistant -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">🌱 AI Farmhand <span class="text-slate-400 font-normal normal-case">(optional — free Gemini API key)</span></label>
+          <input id="key-gemini" type="password" autocomplete="off" placeholder="Gemini API Key (from ai.google.dev)"
+            class="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[48px]">
+          <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">Get a free key at <strong>ai.google.dev</strong> — sign in with any Google account, tap "Get API key". Free tier covers thousands of farm questions per day.</p>
+        </div>
+
         <!-- Save Settings -->
         <button id="save-settings-btn" class="w-full py-4 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold rounded-xl min-h-[52px] transition-colors">
           <i class="fa-solid fa-floppy-disk mr-2"></i>Save Settings
@@ -758,6 +766,7 @@ window.addEventListener('offline', () => {
     // Populate API key fields — password inputs are blank on load even if a key is saved
     if (gs.apiKeys?.govee)      $('key-govee').value      = gs.apiKeys.govee;
     if (gs.apiKeys?.sensorpush) $('key-sensorpush').value = gs.apiKeys.sensorpush;
+    if (gs.apiKeys?.gemini)     $('key-gemini').value     = gs.apiKeys.gemini;
 
     // Try to render from offline cache immediately for instant load feel
     const cache = loadOfflineCache();
@@ -855,8 +864,9 @@ window.addEventListener('offline', () => {
     const A = window.app;
     if (A.state.isReadOnly) return;
     A.state.globalSettings.climateProfile = $('climate-select').value;
-    A.state.globalSettings.apiKeys.govee = $('key-govee').value;
-    A.state.globalSettings.apiKeys.sensorpush = $('key-sensorpush').value;
+    A.state.globalSettings.apiKeys.govee      = $('key-govee').value.trim();
+    A.state.globalSettings.apiKeys.sensorpush = $('key-sensorpush').value.trim();
+    A.state.globalSettings.apiKeys.gemini     = $('key-gemini').value.trim();
     setSyncStatus('saving');
     const synced = await A.syncFarmToCloud(A.state);
     setSyncStatus(synced ? 'saved' : 'error');
@@ -1714,10 +1724,246 @@ try {
 </button>
 
 <div id="ai-modal" class="fixed inset-0 bg-slate-50 z-[60] flex-col hidden h-[100dvh] w-full max-w-md mx-auto shadow-2xl">
-  
+
   <div class="bg-emerald-800 text-white p-4 flex justify-between items-center shadow-md shrink-0">
     <div>
-      <h2 class="text-xl font-bold">Gemma Farmhand</h2>
+      <h2 class="text-xl font-bold">🌱 AI Farmhand</h2>
+      <p class="text-xs text-emerald-200" id="ai-modal-subtitle">Powered by Google Gemini</p>
+    </div>
+    <button id="close-ai" class="text-3xl font-bold px-2 leading-none">&times;</button>
+  </div>
+
+  <!-- No-key state: shown when user hasn't added a Gemini key yet -->
+  <div id="ai-no-key" class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white">
+    <div class="text-6xl mb-4">🌱</div>
+    <h3 class="text-lg font-bold text-slate-800 mb-2">AI Farmhand Ready</h3>
+    <p class="text-sm text-slate-500 mb-6 leading-relaxed">
+      Add your free Gemini API key in <strong>Settings</strong> to activate your AI agronomist.
+      Get one free at <strong>ai.google.dev</strong> — takes 2 minutes.
+    </p>
+    <button onclick="document.getElementById('ai-modal').classList.add('hidden');document.getElementById('ai-modal').classList.remove('flex');document.getElementById('settings-accordion').open=true;"
+      class="bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold text-sm">
+      Open Settings
+    </button>
+  </div>
+
+  <!-- Chat interface: shown when API key is present -->
+  <div id="ai-chat-interface" class="hidden flex-col flex-1 bg-slate-100 overflow-hidden" style="min-height:0">
+    <div id="ai-chat-history" class="flex-1 overflow-y-auto p-4 space-y-3">
+      <div class="bg-white border border-slate-200 p-3 rounded-lg text-slate-800 text-sm shadow-sm w-5/6">
+        👋 <strong>Farmhand:</strong> I can see your live greenhouse data. Ask me anything about your crops, VPD, or what to do right now.
+      </div>
+    </div>
+    <div class="bg-white border-t border-slate-200 p-3 shrink-0" style="padding-bottom:max(12px, env(safe-area-inset-bottom))">
+      <div class="flex items-center space-x-2">
+        <button id="ai-mic-btn" class="bg-slate-100 text-slate-600 p-3 rounded-full text-xl hover:bg-red-100 hover:text-red-600 transition-all w-12 h-12 flex items-center justify-center shrink-0">
+          🎙️
+        </button>
+        <input type="text" id="ai-text-input"
+          class="flex-1 border border-slate-300 rounded-full px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 bg-slate-50"
+          placeholder="Ask about VPD, pests, watering...">
+        <button id="ai-send-btn" class="bg-emerald-600 text-white p-3 rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-md">
+          ➤
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Gemini AI Farmhand ────────────────────────────────────────────────────────
+// Replaced WebLLM with Gemini 2.0 Flash API.
+// Key stored per-user in Firestore globalSettings.apiKeys.gemini.
+// No download, no WebGPU required, works on any device.
+// ─────────────────────────────────────────────────────────────────────────────
+(function initGeminiFarmhand() {
+  const fab           = document.getElementById('ai-fab');
+  const modal         = document.getElementById('ai-modal');
+  const closeBtn      = document.getElementById('close-ai');
+  const noKeyView     = document.getElementById('ai-no-key');
+  const chatInterface = document.getElementById('ai-chat-interface');
+  const chatHistory   = document.getElementById('ai-chat-history');
+  const textInput     = document.getElementById('ai-text-input');
+  const sendBtn       = document.getElementById('ai-send-btn');
+  const micBtn        = document.getElementById('ai-mic-btn');
+  const subtitle      = document.getElementById('ai-modal-subtitle');
+
+  // ── Get saved Gemini key from app state ──────────────────────────────────
+  function getApiKey() {
+    return window.app?.state?.globalSettings?.apiKeys?.gemini?.trim() || '';
+  }
+
+  // ── Show correct sub-view based on key presence ──────────────────────────
+  function showCorrectView() {
+    if (getApiKey()) {
+      noKeyView.classList.add('hidden');
+      chatInterface.classList.remove('hidden');
+      chatInterface.classList.add('flex');
+      subtitle.textContent = 'Gemini 2.0 Flash · Live Farm Context';
+      restoreChatHistory();
+    } else {
+      noKeyView.classList.remove('hidden');
+      chatInterface.classList.add('hidden');
+      chatInterface.classList.remove('flex');
+      subtitle.textContent = 'Add API key in Settings to activate';
+    }
+  }
+
+  // ── Toggle modal ─────────────────────────────────────────────────────────
+  if (fab) fab.addEventListener('click', () => {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    showCorrectView();
+  });
+  if (closeBtn) closeBtn.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  });
+
+  // ── Chat history via sessionStorage ─────────────────────────────────────
+  const CHAT_KEY = 'growpulse_ai_chat';
+  function saveChatHistory() {
+    try {
+      const msgs = [...chatHistory.querySelectorAll('[data-role]')].map(el => ({
+        role: el.dataset.role, html: el.innerHTML, cls: el.className
+      }));
+      sessionStorage.setItem(CHAT_KEY, JSON.stringify(msgs));
+    } catch(e) {}
+  }
+  function restoreChatHistory() {
+    try {
+      const raw = sessionStorage.getItem(CHAT_KEY);
+      if (!raw) return;
+      const msgs = JSON.parse(raw);
+      if (!msgs.length || chatHistory.children.length > 1) return;
+      msgs.forEach(m => {
+        const div = document.createElement('div');
+        div.className = m.cls; div.dataset.role = m.role; div.innerHTML = m.html;
+        chatHistory.appendChild(div);
+      });
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    } catch(e) {}
+  }
+
+  // ── Add message bubble ───────────────────────────────────────────────────
+  function addMessage(sender, text, isThinking) {
+    const isBot = sender !== 'You';
+    const div = document.createElement('div');
+    div.className = 'p-3 rounded-lg text-sm shadow-sm ' + (
+      isBot ? 'bg-white border border-slate-200 text-slate-800 self-start w-5/6'
+            : 'bg-emerald-600 text-white self-end ml-auto w-5/6 text-right'
+    );
+    div.dataset.role = isBot ? 'ai' : 'user';
+    div.innerHTML = isThinking
+      ? '<em class="text-slate-400">Farmhand is thinking\u2026</em>'
+      : '<strong>' + sender + ':</strong> ' + text.replace(/\n/g, '<br>');
+    chatHistory.appendChild(div);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+    if (!isThinking) saveChatHistory();
+    return div;
+  }
+
+  // ── Sanitized farm context ───────────────────────────────────────────────
+  // Reads window.practicalFarmState (published by main app, already scrubbed).
+  // Double-scrubs any forbidden keys as defense-in-depth.
+  function getSanitizedContext() {
+    try {
+      const state = window.practicalFarmState;
+      if (!state) return 'No farm data yet — ask the user to refresh.';
+      const safe = JSON.parse(JSON.stringify(state));
+      const FORBIDDEN = ['apiKeys','firebaseConfig','uid','email','password','token','secret'];
+      (function scrub(obj) {
+        if (!obj || typeof obj !== 'object') return;
+        Object.keys(obj).forEach(k => { FORBIDDEN.includes(k) ? delete obj[k] : scrub(obj[k]); });
+      })(safe);
+      return JSON.stringify(safe);
+    } catch(e) { return 'Error reading farm state.'; }
+  }
+
+  // ── Gemini 2.0 Flash API call ────────────────────────────────────────────
+  async function handleChat(userText) {
+    userText = (userText || '').trim();
+    if (!userText) return;
+    const apiKey = getApiKey();
+    if (!apiKey) { showCorrectView(); return; }
+
+    textInput.value = '';
+    addMessage('You', userText);
+    const thinking = addMessage('Farmhand', '', true);
+
+    const systemPrompt =
+      'You are an expert agronomist embedded in a commercial greenhouse management app (GrowPulse). ' +
+      'The farmer needs practical, actionable advice for their specific situation. ' +
+      'Current live farm context: ' + getSanitizedContext() + '. ' +
+      'Rules: (1) Keep answers under 4 sentences. (2) Reference their actual crop and current numbers. ' +
+      '(3) Tell them what to DO right now, not just theory. (4) If everything looks fine, say so briefly.';
+
+    try {
+      const res = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: 'user', parts: [{ text: userText }] }],
+            generationConfig: { maxOutputTokens: 300, temperature: 0.4 }
+          })
+        }
+      );
+      const data = await res.json();
+      thinking.remove();
+      if (!res.ok) {
+        const msg = data?.error?.message || 'HTTP ' + res.status;
+        addMessage('Farmhand', '⚠️ API error: ' + msg + '. Check your Gemini key in Settings.');
+      } else {
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response received.';
+        addMessage('Farmhand', reply);
+      }
+    } catch(err) {
+      thinking.remove();
+      addMessage('Farmhand', '⚠️ Network error: ' + err.message + '. Check your connection.');
+    }
+  }
+
+  // ── Wire send + Enter ────────────────────────────────────────────────────
+  if (sendBtn) sendBtn.addEventListener('click', () => handleChat(textInput.value));
+  if (textInput) textInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleChat(textInput.value); });
+
+  // ── Voice input via Web Speech API ──────────────────────────────────────
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR && micBtn) {
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    micBtn.addEventListener('click', () => {
+      micBtn.classList.add('bg-red-600','text-white','animate-pulse','ring-4','ring-red-500/50');
+      micBtn.classList.remove('bg-slate-100','text-slate-600');
+      textInput.placeholder = 'Listening\u2026';
+      recognition.start();
+    });
+    recognition.onresult = e => {
+      const t = e.results[0][0].transcript;
+      textInput.value = t;
+      handleChat(t);
+    };
+    const resetMic = () => {
+      micBtn.classList.remove('bg-red-600','text-white','animate-pulse','ring-4','ring-red-500/50');
+      micBtn.classList.add('bg-slate-100','text-slate-600');
+    };
+    recognition.onspeechend = () => { recognition.stop(); resetMic(); textInput.placeholder = 'Ask about VPD, pests, watering\u2026'; };
+    recognition.onerror    = () => { resetMic(); textInput.placeholder = 'Voice error \u2014 please type.'; };
+  } else if (micBtn) {
+    micBtn.style.display = 'none';
+  }
+
+})();
+</script>
+
+</body>
+</html>
+
       <p class="text-xs text-emerald-200">100% Offline Edge AI</p>
     </div>
     <button id="close-ai" class="text-3xl font-bold px-2">&times;</button>
