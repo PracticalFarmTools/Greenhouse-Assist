@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -115,14 +115,14 @@
   #ptr-indicator{transition:transform .2s ease,opacity .2s ease;transform:translateY(-40px);opacity:0}
   #ptr-indicator.visible{transform:translateY(0);opacity:1}
   #ptr-indicator.refreshing .ptr-arrow{animation:spin .8s linear infinite}
-  /* Gemma AI FAB */
+  /* AI Farmhand FAB */
   #ai-fab{transition:transform .2s ease,box-shadow .2s ease}
   #ai-fab:active{transform:scale(0.9)}
   @media(prefers-color-scheme:dark){
     #ai-modal>.bg-emerald-800{background:#064e3b!important}
-    #ai-loading-overlay{background:var(--bg-card)!important}
-    #ai-loading-overlay h3{color:var(--text-primary)!important}
-    #ai-loading-overlay p{color:var(--text-secondary)!important}
+    #ai-no-key{background:var(--bg-card)!important}
+    #ai-no-key h3{color:var(--text-primary)!important}
+    #ai-no-key p{color:var(--text-secondary)!important}
     #ai-chat-interface{background:var(--bg-body)!important}
     #ai-chat-history .bg-white{background:var(--bg-card)!important;border-color:var(--border)!important}
     #ai-chat-history .bg-white strong{color:var(--text-primary)!important}
@@ -944,15 +944,15 @@ window.addEventListener('offline', () => {
     closeDetailModal();
     renderHouses();
 
-    // Publish sanitized state for Gemma sidecar
+    // Publish sanitized state for AI Farmhand
     publishFarmState();
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PUBLISH FARM STATE (secure handshake for AI sidecar)
+  // PUBLISH FARM STATE (secure handshake for AI Farmhand)
   // ─────────────────────────────────────────────────────────────────────────
   // Publishes a read-only, sanitized copy of the farm state to a well-known
-  // global. The Gemma sidecar reads this — never the raw window.app.state.
+  // global. The AI Farmhand reads this — never the raw window.app.state.
   function publishFarmState() {
     try {
       const A = window.app;
